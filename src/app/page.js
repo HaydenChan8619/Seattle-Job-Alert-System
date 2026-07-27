@@ -168,6 +168,7 @@ export default function Dashboard() {
   const [companyFilter, setCompanyFilter] = useState("All");
   const [viewedFilter, setViewedFilter] = useState("All"); // All | Unviewed | Viewed
   const [flaggedOnlyFilter, setFlaggedOnlyFilter] = useState(false);
+  const [sortBy, setSortBy] = useState("default"); // default | unviewed | newest
   const [viewMode, setViewMode] = useState("cards");
 
   // Modal / Drawer State
@@ -197,6 +198,22 @@ export default function Dashboard() {
   // Pending Application Confirmation Modal State
   const [pendingApplyJob, setPendingApplyJob] = useState(null);
 
+  // Helper to sort jobs on page load or manual refresh
+  const sortJobsOnRefresh = (jobList) => {
+    return [...jobList].sort((a, b) => {
+      // 1. Unviewed jobs (false) come before Viewed jobs (true)
+      if (Boolean(a.is_viewed) !== Boolean(b.is_viewed)) {
+        return a.is_viewed ? 1 : -1;
+      }
+      // 2. Flagged jobs (true) come before unflagged jobs (false)
+      if (Boolean(a.is_flagged) !== Boolean(b.is_flagged)) {
+        return a.is_flagged ? -1 : 1;
+      }
+      // 3. Newest first
+      return (b.first_seen_at || 0) - (a.first_seen_at || 0);
+    });
+  };
+
   // Fetch Live Jobs from DynamoDB API
   const fetchLiveDynamoDBJobs = async () => {
     setIsRefreshing(true);
@@ -217,8 +234,9 @@ export default function Dashboard() {
           is_viewed: j.is_viewed !== undefined ? Boolean(j.is_viewed) : (j.status && j.status !== "New Drop"),
           is_flagged: Boolean(j.is_flagged)
         }));
-        setJobs(normalizedLiveJobs);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(normalizedLiveJobs));
+        const sortedJobs = sortJobsOnRefresh(normalizedLiveJobs);
+        setJobs(sortedJobs);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sortedJobs));
       } else {
         loadLocalStorage();
       }
@@ -240,13 +258,16 @@ export default function Dashboard() {
           is_viewed: j.is_viewed !== undefined ? Boolean(j.is_viewed) : (j.status && j.status !== "New Drop"),
           is_flagged: Boolean(j.is_flagged)
         }));
-        setJobs(normalized);
+        const sortedJobs = sortJobsOnRefresh(normalized);
+        setJobs(sortedJobs);
       } else {
-        setJobs(INITIAL_NEW_GRAD_JOBS);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(INITIAL_NEW_GRAD_JOBS));
+        const sortedJobs = sortJobsOnRefresh(INITIAL_NEW_GRAD_JOBS);
+        setJobs(sortedJobs);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sortedJobs));
       }
     } catch (e) {
-      setJobs(INITIAL_NEW_GRAD_JOBS);
+      const sortedJobs = sortJobsOnRefresh(INITIAL_NEW_GRAD_JOBS);
+      setJobs(sortedJobs);
     }
   };
 
@@ -401,18 +422,28 @@ export default function Dashboard() {
     });
 
     return list.sort((a, b) => {
-      // 1. Unviewed jobs (false) come before Viewed jobs (true)
-      if (Boolean(a.is_viewed) !== Boolean(b.is_viewed)) {
-        return a.is_viewed ? 1 : -1;
+      if (sortBy === "unviewed") {
+        if (Boolean(a.is_viewed) !== Boolean(b.is_viewed)) {
+          return a.is_viewed ? 1 : -1;
+        }
+        if (Boolean(a.is_flagged) !== Boolean(b.is_flagged)) {
+          return a.is_flagged ? -1 : 1;
+        }
+        return (b.first_seen_at || 0) - (a.first_seen_at || 0);
       }
-      // 2. Flagged jobs (true) come before unflagged jobs (false)
+
+      if (sortBy === "newest") {
+        return (b.first_seen_at || 0) - (a.first_seen_at || 0);
+      }
+
+      // Default (Stable order): Flagged jobs top, then newest drops first.
+      // Changing is_viewed state updates card styling without jumping card position!
       if (Boolean(a.is_flagged) !== Boolean(b.is_flagged)) {
         return a.is_flagged ? -1 : 1;
       }
-      // 3. Newest first
       return (b.first_seen_at || 0) - (a.first_seen_at || 0);
     });
-  }, [jobs, searchQuery, statusFilter, roleFilter, companyFilter, viewedFilter, flaggedOnlyFilter]);
+  }, [jobs, searchQuery, statusFilter, roleFilter, companyFilter, viewedFilter, flaggedOnlyFilter, sortBy]);
 
   // Job Action Handlers
   const handleApplyNow = (job) => {
@@ -821,6 +852,20 @@ export default function Dashboard() {
                   <option value="All">All View States</option>
                   <option value="Unviewed">Unviewed Only ({metrics.unviewed})</option>
                   <option value="Viewed">Viewed Only</option>
+                </select>
+              </div>
+
+              {/* Sort By Dropdown */}
+              <div className="flex items-center gap-1.5 bg-[#f1f5f9] border-2 border-[#1e293b] px-2.5 py-1.5 rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]">
+                <span className="text-[#1e293b]">Sort:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="bg-transparent text-[#1e293b] focus:outline-none font-bold cursor-pointer"
+                >
+                  <option value="default">Default (Stable)</option>
+                  <option value="unviewed">Unviewed First</option>
+                  <option value="newest">Newest First</option>
                 </select>
               </div>
 
