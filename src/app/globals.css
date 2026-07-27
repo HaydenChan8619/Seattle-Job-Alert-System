@@ -1,58 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --card-bg: #18181b;
-  --border-color: #27272a;
+  --background: #faf8f5;
+  --foreground: #1e293b;
+  --card-bg: #ffffff;
+  --border-color: #1e293b;
+  --pastel-green: #dcfce7;
+  --pastel-yellow: #fef9c3;
+  --pastel-slate: #e2e8f0;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Space Mono', monospace;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-family: var(--font-sans);
   overflow-x: hidden;
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
 }
 
-.mono-font {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+.font-display {
+  font-family: var(--font-display);
 }
 
-/* Custom Scrollbars */
+.mono-font {
+  font-family: var(--font-mono);
+}
+
+/* Soft-Brutalist Card Utility */
+.soft-brutal-card {
+  background: #ffffff;
+  border: 2px solid #1e293b;
+  box-shadow: 3px 3px 0px 0px #1e293b;
+  transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.soft-brutal-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0px 0px #1e293b;
+}
+
+.soft-brutal-btn {
+  background: #dcfce7;
+  color: #1e293b;
+  border: 2px solid #1e293b;
+  box-shadow: 2px 2px 0px 0px #1e293b;
+  font-weight: 700;
+  transition: all 0.1s ease;
+}
+
+.soft-brutal-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px 0px #1e293b;
+  background: #bbf7d0;
+}
+
+.soft-brutal-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px 0px #1e293b;
+}
+
+/* Custom Scrollbars for Soft Pastel Theme */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: #faf8f5;
+  border-left: 1.5.px solid #1e293b;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
-  border-radius: 3px;
+  background: #1e293b;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
-}
-
-/* Pulse animation for active monitor status */
-@keyframes status-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
-  }
-}
-
-.pulse-indicator {
-  animation: status-pulse 2s infinite;
+  background: #475569;
 }

@@ -19,7 +19,20 @@ except Exception as e:
     table = None
 
 LOCATION_KEYWORDS = ["seattle", "bellevue", "redmond"]
-ROLE_KEYWORDS = ["software", "sde", "swe", "product manager", "product management", "pm"]
+ROLE_KEYWORDS = ["software", "sde", "swe", "product manager", "product management", "pm", "apm"]
+
+# Target New Grad & Early Career Keywords
+NEW_GRAD_KEYWORDS = [
+    "new grad", "new-grad", "university", "early career", "early-career",
+    "entry level", "entry-level", "graduate", "college", "associate",
+    "campus", "2025", "2026", "sde 1", "sde i", "swe 1", "swe i", "apm"
+]
+
+# Strict Exclusions for Experienced Roles
+EXCLUDE_KEYWORDS = [
+    "senior", "sr", "staff", "principal", "lead", "manager", "director",
+    "vp", "head", "architect", "ii", "iii", "iv", "l5", "l6", "l7", "l8"
+]
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -30,10 +43,26 @@ def is_target_role_and_location(title: str, location: str) -> bool:
     title_lower = title.lower()
     location_lower = location.lower()
     
+    # 1. Location match check
     match_location = any(loc in location_lower for loc in LOCATION_KEYWORDS)
+    if not match_location:
+        return False
+        
+    # 2. Role match check (SWE or PM)
     match_role = any(role in title_lower for role in ROLE_KEYWORDS)
+    if not match_role:
+        return False
+        
+    # 3. Explicit Senior / Experienced exclusion check
+    has_exclusion = any(ex in title_lower for ex in EXCLUDE_KEYWORDS)
+    if has_exclusion:
+        return False
+
+    # 4. New Grad / Early Career match check
+    match_new_grad = any(ng in title_lower for ng in NEW_GRAD_KEYWORDS)
     
-    return match_location and match_role
+    # Accept if explicit New Grad keyword is present OR if it's an un-levelled entry role without senior titles
+    return match_new_grad or not has_exclusion
 
 def is_already_notified(job_id: str) -> bool:
     if not table:
@@ -57,6 +86,7 @@ def save_job_state(job_id: str, company: str, title: str, url: str):
                 "title": title,
                 "url": url,
                 "first_seen_at": int(time.time()),
+                "role_level": "New Grad / Early Career",
                 "ttl": ttl_timestamp
             }
         )
@@ -69,7 +99,7 @@ def send_discord_alert(company: str, title: str, location: str, url: str):
         return
 
     payload = {
-        "content": "🚨 **NEW SEATTLE JOB OPENING DETECTED** 🚨",
+        "content": "🎓 **NEW SEATTLE NEW GRAD / EARLY CAREER JOB DETECTED** 🚨",
         "embeds": [
             {
                 "title": f"{company.upper()} - {title}",
@@ -77,9 +107,10 @@ def send_discord_alert(company: str, title: str, location: str, url: str):
                 "color": 3066993,
                 "fields": [
                     {"name": "Location", "value": location or "Greater Seattle Area", "inline": True},
-                    {"name": "Company", "value": company.capitalize(), "inline": True}
+                    {"name": "Company", "value": company.capitalize(), "inline": True},
+                    {"name": "Level", "value": "🎓 New Grad / Early Career", "inline": True}
                 ],
-                "footer": {"text": "Seattle Tech Job Alert System • Immediate Apply Notification"}
+                "footer": {"text": "Seattle New Grad Job Alert System • Immediate Apply Notification"}
             }
         ]
     }
@@ -148,7 +179,7 @@ def check_lever_companies():
 
 def check_amazon():
     new_jobs = []
-    url = "https://www.amazon.jobs/en/search.json?loc_query=Seattle%2C%20WA%2C%20United%20States&offset=0&result_limit=30&sort=recent"
+    url = "https://www.amazon.jobs/en/search.json?loc_query=Seattle%2C%20WA%2C%20United%20States&base_query=new%20grad%20software&offset=0&result_limit=30&sort=recent"
     data = fetch_json(url)
     if data and "jobs" in data:
         for job in data["jobs"]:
@@ -163,7 +194,7 @@ def check_amazon():
 
 def check_microsoft():
     new_jobs = []
-    url = "https://gcsservices.careers.microsoft.com/search/api/v1/search?lc=Seattle%2C%20Washington%2C%20United%20States&l=en_us&pg=1&pgSz=20&o=Recent"
+    url = "https://gcsservices.careers.microsoft.com/search/api/v1/search?lc=Seattle%2C%20Washington%2C%20United%20States&q=university%20graduate&l=en_us&pg=1&pgSz=20&o=Recent"
     data = fetch_json(url)
     if data and "operationResult" in data and "result" in data["operationResult"]:
         jobs = data["operationResult"]["result"].get("jobs", [])
@@ -179,7 +210,7 @@ def check_microsoft():
 
 def check_google():
     new_jobs = []
-    url = "https://careers.google.com/api/v3/search/?distance=50&q=software%20product%20manager&location=Seattle%2C%20WA%2C%20USA"
+    url = "https://careers.google.com/api/v3/search/?distance=50&q=early%20career%20software&location=Seattle%2C%20WA%2C%20USA"
     data = fetch_json(url)
     if data and "jobs" in data:
         for job in data["jobs"]:
@@ -217,7 +248,7 @@ def check_workday_companies():
     ]
     new_jobs = []
     for ep in endpoints:
-        post_body = {"searchText": "Software Product", "limit": 20, "offset": 0}
+        post_body = {"searchText": "New Grad Software", "limit": 20, "offset": 0}
         data = fetch_json(ep["url"], post_data=post_body)
         if data and "jobPostings" in data:
             for job in data["jobPostings"]:
@@ -270,10 +301,10 @@ def lambda_handler(event, context):
 
     return {
         "statusCode": 200,
-        "body": json.dumps(f"Successfully processed scan. Found {len(all_new_jobs)} new target jobs.")
+        "body": json.dumps(f"Successfully processed scan. Found {len(all_new_jobs)} new target New Grad jobs.")
     }
 
 if __name__ == "__main__":
-    print("Testing lambda handler execution...")
+    print("Testing New Grad scraper execution...")
     res = lambda_handler(None, None)
     print("Execution output:", res)

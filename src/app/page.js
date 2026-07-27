@@ -14,91 +14,96 @@ import {
   Download,
   Upload,
   CheckCircle2,
-  AlertCircle,
   FileText,
-  Building2,
-  ChevronRight,
   X,
   Zap,
   TrendingUp,
   RotateCcw,
-  Sparkles,
-  BookmarkCheck,
-  Send
+  RefreshCw,
+  GraduationCap,
+  ArrowUpRight,
+  Database,
+  Check,
+  Building2
 } from "lucide-react";
 
-// Target Companies & ATS Configuration
+// Target Companies Config
 const TARGET_COMPANIES = [
   "Stripe", "Databricks", "Snowflake", "DoorDash", "Palantir",
   "Snap Inc.", "Amazon", "Microsoft", "Google", "Apple",
   "Meta", "Uber", "LinkedIn", "NVIDIA", "Oracle"
 ];
 
-const INITIAL_JOBS = [
+// Clean Dataset
+const INITIAL_NEW_GRAD_JOBS = [
   {
-    job_id: "stripe_829104",
+    job_id: "stripe_ng_829104",
     company: "Stripe",
-    title: "Software Engineer, Infrastructure & Core Systems",
+    title: "Software Engineer, New Grad 2026",
     location: "Seattle, WA",
     ats: "Greenhouse",
-    url: "https://stripe.com/jobs/search?q=software",
-    first_seen_at: Date.now() - 1000 * 60 * 12, // 12 mins ago
+    url: "https://stripe.com/jobs/search?q=new+grad",
+    first_seen_at: Date.now() - 1000 * 60 * 12,
     applied_at: null,
-    status: "New Drop", // New Drop, Applied, Interviewing, Offer, Rejected, Archived
+    status: "New Drop",
     role_category: "Software Engineer",
+    role_level: "New Grad",
     resume_version: "",
     referral_note: "",
     notes: ""
   },
   {
-    job_id: "databricks_736201",
+    job_id: "databricks_ng_736201",
     company: "Databricks",
-    title: "Senior Staff Product Manager - Lakehouse Compute Platform",
+    title: "Associate Product Manager (APM), University Graduate",
     location: "Bellevue, WA",
     ats: "Greenhouse",
     url: "https://www.databricks.com/company/careers/open-positions",
-    first_seen_at: Date.now() - 1000 * 60 * 35, // 35 mins ago
+    first_seen_at: Date.now() - 1000 * 60 * 35,
     applied_at: null,
     status: "New Drop",
     role_category: "Product Manager",
+    role_level: "New Grad",
     resume_version: "",
     referral_note: "",
     notes: ""
   },
   {
-    job_id: "amazon_icims_991823",
+    job_id: "amazon_icims_ng_991823",
     company: "Amazon",
-    title: "Software Development Engineer II (SDE II) - AWS Database Services",
+    title: "Software Development Engineer I (SDE I), Early Career 2025/2026",
     location: "Seattle, WA",
     ats: "Custom API",
-    url: "https://www.amazon.jobs/en/search.json",
-    first_seen_at: Date.now() - 1000 * 60 * 95, // 1.5 hours ago
+    url: "https://www.amazon.jobs/en/search.json?base_query=new%20grad",
+    first_seen_at: Date.now() - 1000 * 60 * 95,
     applied_at: Date.now() - 1000 * 60 * 90,
     status: "Applied",
     role_category: "Software Engineer",
-    resume_version: "SWE_Backend_v4_AWS.pdf",
-    referral_note: "Reached out to L7 Mgr on LinkedIn",
-    notes: "Applied 5 mins after drop."
+    role_level: "New Grad",
+    resume_version: "SWE_NewGrad_v3_AWS.pdf",
+    referral_note: "Contacted AWS Technical Recruiter on LinkedIn",
+    notes: "Submitted 5 minutes post release."
   },
   {
-    job_id: "msft_982103",
+    job_id: "msft_ng_982103",
     company: "Microsoft",
-    title: "Principal Product Manager - Azure AI Infrastructure",
+    title: "Software Engineer, University Graduates Full-Time",
     location: "Redmond, WA",
     ats: "Custom API",
     url: "https://jobs.careers.microsoft.com/",
-    first_seen_at: Date.now() - 1000 * 60 * 240, // 4 hours ago
+    first_seen_at: Date.now() - 1000 * 60 * 240,
     applied_at: Date.now() - 1000 * 60 * 220,
     status: "Interviewing",
-    role_category: "Product Manager",
-    resume_version: "PM_AI_Infrastructure_v2.pdf",
-    referral_note: "Internal referral submitted",
-    notes: "Recruiter phone screen scheduled for Thursday."
+    role_category: "Software Engineer",
+    role_level: "New Grad",
+    resume_version: "SWE_University_v2.pdf",
+    referral_note: "Submitted campus referral code",
+    notes: "First round technical screen scheduled."
   },
   {
-    job_id: "snowflake_621900",
+    job_id: "snowflake_ng_621900",
     company: "Snowflake",
-    title: "Software Engineer - Distributed Query Processing",
+    title: "Associate Software Engineer, Entry Level",
     location: "Bellevue, WA",
     ats: "Greenhouse",
     url: "https://www.snowflake.com/en/company/careers/",
@@ -106,14 +111,15 @@ const INITIAL_JOBS = [
     applied_at: null,
     status: "New Drop",
     role_category: "Software Engineer",
+    role_level: "New Grad",
     resume_version: "",
     referral_note: "",
     notes: ""
   },
   {
-    job_id: "google_102938",
+    job_id: "google_ng_102938",
     company: "Google",
-    title: "Staff Software Engineer, Google Cloud Platform",
+    title: "Software Engineer, Early Career, Campus 2026",
     location: "Seattle, WA, USA",
     ats: "Custom API",
     url: "https://careers.google.com/jobs/results/",
@@ -121,24 +127,27 @@ const INITIAL_JOBS = [
     applied_at: Date.now() - 1000 * 60 * 595,
     status: "Applied",
     role_category: "Software Engineer",
-    resume_version: "SWE_Distributed_Systems_v1.pdf",
-    referral_note: "Ex-colleague referral",
-    notes: "Applied in under 5 minutes!"
+    role_level: "New Grad",
+    resume_version: "SWE_EarlyCareer_v1.pdf",
+    referral_note: "Alumni referral link attached",
+    notes: "Application completed."
   }
 ];
 
-const LOCAL_STORAGE_KEY = "seattle_job_tracker_data";
+const LOCAL_STORAGE_KEY = "seattle_job_tracker_soft_brutal_v1";
 
 export default function Dashboard() {
   const [jobs, setJobs] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Filters & Views State
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [roleFilter, setRoleFilter] = useState("All");
   const [companyFilter, setCompanyFilter] = useState("All");
-  const [viewMode, setViewMode] = useState("cards"); // 'cards' | 'table'
+  const [viewMode, setViewMode] = useState("cards");
 
   // Modal / Drawer State
   const [activeDrawerJob, setActiveDrawerJob] = useState(null);
@@ -158,33 +167,79 @@ export default function Dashboard() {
     role_category: "Software Engineer"
   });
 
-  // 1. Initial Load & Persistence
-  useEffect(() => {
+  // Fetch Live Jobs from DynamoDB API
+  const fetchLiveDynamoDBJobs = async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await fetch("/api/jobs");
+      const data = await res.json();
+      if (data.live && Array.isArray(data.jobs)) {
+        setIsLiveConnected(true);
+        if (data.jobs.length > 0) {
+          const normalizedLiveJobs = data.jobs.map((j) => ({
+            ...j,
+            first_seen_at:
+              j.first_seen_at && j.first_seen_at < 10000000000
+                ? j.first_seen_at * 1000
+                : j.first_seen_at || Date.now(),
+            ats: j.ats || "Live Scraper",
+            status: (j.status || "New Drop").replace(/[^\w\s]/gi, "").trim(),
+            role_level: "New Grad"
+          }));
+          setJobs(normalizedLiveJobs);
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(normalizedLiveJobs));
+        }
+      } else {
+        loadLocalStorage();
+      }
+    } catch (e) {
+      loadLocalStorage();
+    } finally {
+      setIsRefreshing(false);
+      setIsLoaded(true);
+    }
+  };
+
+  const loadLocalStorage = () => {
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (stored) {
         setJobs(JSON.parse(stored));
       } else {
-        setJobs(INITIAL_JOBS);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(INITIAL_JOBS));
+        setJobs(INITIAL_NEW_GRAD_JOBS);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(INITIAL_NEW_GRAD_JOBS));
       }
     } catch (e) {
-      console.error("Failed to load from LocalStorage:", e);
-      setJobs(INITIAL_JOBS);
+      setJobs(INITIAL_NEW_GRAD_JOBS);
     }
-    setIsLoaded(true);
+  };
+
+  useEffect(() => {
+    fetchLiveDynamoDBJobs();
   }, []);
 
-  const saveJobsToStorage = (updatedJobs) => {
+  const saveJobsToStorage = async (updatedJobs, modifiedJob = null) => {
     setJobs(updatedJobs);
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedJobs));
     } catch (e) {
       console.error("Failed to save to LocalStorage:", e);
     }
+
+    if (modifiedJob) {
+      try {
+        await fetch("/api/jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(modifiedJob)
+        });
+      } catch (err) {
+        console.warn("DynamoDB sync error:", err);
+      }
+    }
   };
 
-  // 2. Calculated Analytics Metrics
+  // Calculated Analytics Metrics
   const metrics = useMemo(() => {
     const total = jobs.length;
     const newDrops = jobs.filter((j) => j.status === "New Drop").length;
@@ -192,7 +247,6 @@ export default function Dashboard() {
     const interviewing = jobs.filter((j) => j.status === "Interviewing").length;
     const offer = jobs.filter((j) => j.status === "Offer").length;
 
-    // Speed-to-apply calculation for jobs applied
     const appliedJobsWithSpeed = jobs.filter(
       (j) => j.applied_at && j.first_seen_at && j.applied_at >= j.first_seen_at
     );
@@ -209,21 +263,18 @@ export default function Dashboard() {
     return { total, newDrops, applied, interviewing, offer, avgMinutes };
   }, [jobs]);
 
-  // 3. Filtered Job List
+  // Filtered Job List
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
-      // Search query matcher
       const matchesSearch =
         searchQuery === "" ||
         job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
         job.location.toLowerCase().includes(searchQuery.toLowerCase());
 
-      // Status matcher
       const matchesStatus =
         statusFilter === "All" || job.status === statusFilter;
 
-      // Role matcher
       const matchesRole =
         roleFilter === "All" ||
         (roleFilter === "Software Engineer" &&
@@ -234,9 +285,9 @@ export default function Dashboard() {
         (roleFilter === "Product Manager" &&
           (job.role_category === "Product Manager" ||
             job.title.toLowerCase().includes("product") ||
+            job.title.toLowerCase().includes("apm") ||
             job.title.toLowerCase().includes("pm")));
 
-      // Company matcher
       const matchesCompany =
         companyFilter === "All" ||
         job.company.toLowerCase() === companyFilter.toLowerCase();
@@ -245,39 +296,41 @@ export default function Dashboard() {
     });
   }, [jobs, searchQuery, statusFilter, roleFilter, companyFilter]);
 
-  // 4. Job Action Handlers
+  // Job Action Handlers
   const handleApplyNow = (jobId, url) => {
-    // Open direct career portal link in a new tab
     window.open(url, "_blank", "noopener,noreferrer");
 
-    // Automatically update job status to Applied with timestamp
     const now = Date.now();
+    let modifiedTarget = null;
     const updated = jobs.map((j) => {
       if (j.job_id === jobId) {
-        return {
+        modifiedTarget = {
           ...j,
           status: j.status === "New Drop" ? "Applied" : j.status,
           applied_at: j.applied_at || now
         };
+        return modifiedTarget;
       }
       return j;
     });
-    saveJobsToStorage(updated);
+    saveJobsToStorage(updated, modifiedTarget);
   };
 
   const handleUpdateStatus = (jobId, newStatus) => {
     const now = Date.now();
+    let modifiedTarget = null;
     const updated = jobs.map((j) => {
       if (j.job_id === jobId) {
-        return {
+        modifiedTarget = {
           ...j,
           status: newStatus,
           applied_at: newStatus === "Applied" && !j.applied_at ? now : j.applied_at
         };
+        return modifiedTarget;
       }
       return j;
     });
-    saveJobsToStorage(updated);
+    saveJobsToStorage(updated, modifiedTarget);
   };
 
   const handleOpenDrawer = (job) => {
@@ -294,9 +347,10 @@ export default function Dashboard() {
     e.preventDefault();
     if (!activeDrawerJob) return;
 
+    let modifiedTarget = null;
     const updated = jobs.map((j) => {
       if (j.job_id === activeDrawerJob.job_id) {
-        return {
+        modifiedTarget = {
           ...j,
           resume_version: drawerForm.resume_version,
           referral_note: drawerForm.referral_note,
@@ -307,11 +361,12 @@ export default function Dashboard() {
               ? Date.now()
               : j.applied_at
         };
+        return modifiedTarget;
       }
       return j;
     });
 
-    saveJobsToStorage(updated);
+    saveJobsToStorage(updated, modifiedTarget);
     setActiveDrawerJob(null);
   };
 
@@ -330,12 +385,13 @@ export default function Dashboard() {
       applied_at: null,
       status: "New Drop",
       role_category: newJobForm.role_category,
+      role_level: "New Grad",
       resume_version: "",
       referral_note: "",
       notes: ""
     };
 
-    saveJobsToStorage([createdJob, ...jobs]);
+    saveJobsToStorage([createdJob, ...jobs], createdJob);
     setIsAddModalOpen(false);
     setNewJobForm({
       company: "Stripe",
@@ -368,19 +424,18 @@ export default function Dashboard() {
             alert(`Successfully imported ${parsed.length} job records.`);
           }
         } catch (err) {
-          alert("Invalid JSON data file format.");
+          alert("Invalid JSON file format.");
         }
       };
     }
   };
 
   const handleResetData = () => {
-    if (confirm("Reset to default dataset? This will replace your local state.")) {
-      saveJobsToStorage(INITIAL_JOBS);
+    if (confirm("Reset to default dataset?")) {
+      saveJobsToStorage(INITIAL_NEW_GRAD_JOBS);
     }
   };
 
-  // Helper formatting function for relative time
   const formatTimeAgo = (timestamp) => {
     if (!timestamp) return "N/A";
     const diffMins = Math.floor((Date.now() - timestamp) / (1000 * 60));
@@ -393,200 +448,194 @@ export default function Dashboard() {
 
   if (!isLoaded) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#09090b] text-zinc-400">
-        <div className="flex items-center gap-3">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
-          <span className="mono-font text-sm">Initializing Seattle Job Monitor State...</span>
+      <div className="flex h-screen w-full items-center justify-center bg-[#faf8f5] text-[#1e293b]">
+        <div className="flex items-center gap-3 p-5 bg-white border-2 border-[#1e293b] shadow-[3px_3px_0px_0px_#1e293b] rounded-md">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#1e293b] border-t-transparent"></div>
+          <span className="font-display font-bold text-base text-[#1e293b]">Loading Soft-Brutal Monitor...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-[#fafafa] flex flex-col font-sans antialiased">
-      {/* 1. Minimalist Top Bar Header */}
-      <header className="border-b border-[#27272a] bg-[#18181b]/80 backdrop-blur sticky top-0 z-30 px-4 lg:px-8 py-3.5 flex items-center justify-between gap-4">
+    <div className="min-h-screen bg-[#faf8f5] text-[#1e293b] flex flex-col font-sans antialiased">
+      
+      {/* Soft Pastel Header */}
+      <header className="bg-white border-b-2 border-[#1e293b] sticky top-0 z-30 px-6 lg:px-10 py-3.5 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 pulse-indicator" />
-            <h1 className="font-semibold text-base tracking-tight text-white flex items-center gap-2">
-              <span>Seattle Tech Job Monitor</span>
-              <span className="text-xs font-mono bg-zinc-800 text-zinc-300 border border-zinc-700 px-2 py-0.5 rounded">
-                15 Hubs • 5m Polling
+          <div className="flex items-center gap-3">
+            <div className="h-3.5 w-3.5 bg-[#4ade80] border-2 border-[#1e293b] rounded-sm" />
+            <h1 className="font-display font-bold text-lg tracking-tight text-[#1e293b] flex items-center gap-3">
+              <span>Seattle Career Monitor</span>
+              <span className="text-xs font-mono font-bold bg-[#dcfce7] text-[#1e293b] border-2 border-[#1e293b] px-2.5 py-0.5 shadow-[1.5px_1.5px_0px_0px_#1e293b] rounded-md">
+                New Grad & Early Career
               </span>
             </h1>
           </div>
-          <div className="hidden md:flex items-center gap-2 text-xs text-zinc-400 border-l border-zinc-800 pl-4 mono-font">
-            <Clock className="w-3.5 h-3.5 text-zinc-400" />
-            <span>Target Window: 8:00 AM - 10:00 PM PST</span>
+          <div className="hidden lg:flex items-center gap-2 text-xs font-mono font-bold text-[#475569] border-l-2 border-[#1e293b] pl-4">
+            <Clock className="w-3.5 h-3.5 text-[#1e293b]" />
+            <span>Radar: 5m Intervals (8AM-10PM PST)</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
+          <span className="hidden md:flex items-center gap-1.5 text-xs font-mono font-bold bg-white text-[#1e293b] border-2 border-[#1e293b] px-2.5 py-1 rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]">
+            <Database className="w-3.5 h-3.5" />
+            {isLiveConnected ? "AWS DynamoDB Live" : "Local Storage"}
+          </span>
+
+          <button
+            onClick={fetchLiveDynamoDBJobs}
+            disabled={isRefreshing}
+            title="Sync with AWS DynamoDB"
+            className="soft-brutal-btn bg-white text-[#1e293b] px-3 py-1.5 rounded-md text-xs flex items-center gap-1.5 font-bold"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Sync AWS</span>
+          </button>
+
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-1.5 text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-md transition shadow-sm"
+            className="soft-brutal-btn bg-[#dcfce7] text-[#1e293b] px-3.5 py-1.5 rounded-md text-xs flex items-center gap-1.5 font-bold"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Add Job</span>
+            <span>Add Position</span>
           </button>
 
           <button
             onClick={handleExportData}
-            title="Export state JSON"
-            className="flex items-center gap-1.5 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 px-2.5 py-1.5 rounded-md transition"
+            title="Export JSON"
+            className="soft-brutal-btn bg-white text-[#1e293b] px-2.5 py-1.5 rounded-md text-xs"
           >
             <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Export</span>
           </button>
 
           <label
-            title="Import state JSON"
-            className="flex items-center gap-1.5 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 px-2.5 py-1.5 rounded-md transition cursor-pointer"
+            title="Import JSON"
+            className="soft-brutal-btn bg-white text-[#1e293b] px-2.5 py-1.5 rounded-md text-xs cursor-pointer flex items-center"
           >
             <Upload className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Import</span>
             <input type="file" accept=".json" onChange={handleImportData} className="hidden" />
           </label>
 
           <button
             onClick={handleResetData}
-            title="Reset default dataset"
-            className="flex items-center text-xs text-zinc-400 hover:text-zinc-200 p-1.5 rounded-md transition"
+            title="Reset data"
+            className="soft-brutal-btn bg-white text-[#64748b] p-1.5 rounded-md text-xs"
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
         </div>
       </header>
 
-      {/* 2. Main Dashboard Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 space-y-6">
+      {/* Main Content Container */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-6 lg:px-10 py-8 space-y-7">
         
-        {/* Speed Analytics Metric Strip */}
-        <section className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="bg-[#18181b] border border-[#27272a] p-3.5 rounded-lg flex flex-col justify-between">
-            <span className="text-xs font-medium text-zinc-400 flex items-center justify-between">
-              New Drops
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-            </span>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold mono-font text-amber-400">{metrics.newDrops}</span>
-              <span className="text-xs text-zinc-500">Unapplied</span>
+        {/* Soft Pastel Analytics Cards */}
+        <section className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
+          <div className="bg-[#fef9c3] border-2 border-[#1e293b] p-4 rounded-md shadow-[2.5px_2.5px_0px_0px_#1e293b] flex flex-col justify-between">
+            <span className="font-display font-bold text-xs uppercase tracking-wider text-[#1e293b]">New Drops</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="mono-font text-3xl font-bold text-[#1e293b]">{metrics.newDrops}</span>
+              <span className="font-mono text-[11px] font-bold bg-white text-[#1e293b] border-2 border-[#1e293b] px-1.5 py-0.5 rounded">Actionable</span>
             </div>
           </div>
 
-          <div className="bg-[#18181b] border border-[#27272a] p-3.5 rounded-lg flex flex-col justify-between">
-            <span className="text-xs font-medium text-zinc-400 flex items-center justify-between">
-              Applied
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            </span>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold mono-font text-emerald-400">{metrics.applied}</span>
-              <span className="text-xs text-zinc-500">Submissions</span>
+          <div className="bg-[#dcfce7] border-2 border-[#1e293b] p-4 rounded-md shadow-[2.5px_2.5px_0px_0px_#1e293b] flex flex-col justify-between">
+            <span className="font-display font-bold text-xs uppercase tracking-wider text-[#1e293b]">Applied</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="mono-font text-3xl font-bold text-[#1e293b]">{metrics.applied}</span>
+              <span className="font-mono text-[11px] font-bold bg-white text-[#1e293b] border-2 border-[#1e293b] px-1.5 py-0.5 rounded">Submitted</span>
             </div>
           </div>
 
-          <div className="bg-[#18181b] border border-[#27272a] p-3.5 rounded-lg flex flex-col justify-between">
-            <span className="text-xs font-medium text-zinc-400 flex items-center justify-between">
-              Interviewing
-              <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
-            </span>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold mono-font text-blue-400">{metrics.interviewing}</span>
-              <span className="text-xs text-zinc-500">Active Pipeline</span>
+          <div className="bg-[#e2e8f0] border-2 border-[#1e293b] p-4 rounded-md shadow-[2.5px_2.5px_0px_0px_#1e293b] flex flex-col justify-between">
+            <span className="font-display font-bold text-xs uppercase tracking-wider text-[#1e293b]">Interviewing</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="mono-font text-3xl font-bold text-[#1e293b]">{metrics.interviewing}</span>
+              <span className="font-mono text-[11px] font-bold bg-white text-[#1e293b] border-2 border-[#1e293b] px-1.5 py-0.5 rounded">Pipeline</span>
             </div>
           </div>
 
-          <div className="bg-[#18181b] border border-[#27272a] p-3.5 rounded-lg flex flex-col justify-between">
-            <span className="text-xs font-medium text-zinc-400 flex items-center justify-between">
-              Avg Speed-to-Apply
-              <Clock className="w-3.5 h-3.5 text-purple-400" />
-            </span>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold mono-font text-purple-400">
-                {metrics.avgMinutes} <span className="text-sm font-normal">m</span>
+          <div className="bg-[#faf8f5] border-2 border-[#1e293b] p-4 rounded-md shadow-[2.5px_2.5px_0px_0px_#1e293b] flex flex-col justify-between">
+            <span className="font-display font-bold text-xs uppercase tracking-wider text-[#1e293b]">Speed-to-Apply</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="mono-font text-3xl font-bold text-[#1e293b]">
+                {metrics.avgMinutes} <span className="text-sm font-bold">min</span>
               </span>
-              <span className="text-xs text-emerald-400">&lt; 5m goal</span>
+              <span className="font-mono text-[11px] font-bold bg-[#dcfce7] text-[#1e293b] border border-[#1e293b] px-1.5 py-0.5 rounded">&lt; 5m goal</span>
             </div>
           </div>
 
-          <div className="bg-[#18181b] border border-[#27272a] p-3.5 rounded-lg col-span-2 md:col-span-1 flex flex-col justify-between">
-            <span className="text-xs font-medium text-zinc-400 flex items-center justify-between">
-              Total Tracked
-              <Briefcase className="w-3.5 h-3.5 text-zinc-400" />
-            </span>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold mono-font text-white">{metrics.total}</span>
-              <span className="text-xs text-zinc-500">Roles</span>
+          <div className="bg-white border-2 border-[#1e293b] p-4 rounded-md shadow-[2.5px_2.5px_0px_0px_#1e293b] col-span-2 md:col-span-1 flex flex-col justify-between">
+            <span className="font-display font-bold text-xs uppercase tracking-wider text-[#1e293b]">Tracked Roles</span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="mono-font text-3xl font-bold text-[#1e293b]">{metrics.total}</span>
+              <span className="font-mono text-[11px] font-bold bg-[#faf8f5] text-[#64748b] border border-[#1e293b] px-1.5 py-0.5 rounded">Seattle</span>
             </div>
           </div>
         </section>
 
-        {/* 3. Controls & Filter Bar */}
-        <section className="bg-[#18181b] border border-[#27272a] p-4 rounded-lg space-y-3">
+        {/* Filter Controls Bar */}
+        <section className="bg-white border-2 border-[#1e293b] p-4 rounded-md shadow-[3px_3px_0px_0px_#1e293b] space-y-3">
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             
-            {/* Search Input */}
             <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748b]" />
               <input
                 type="text"
-                placeholder="Search job title, company, or location (e.g. Bellevue, SDE, Stripe)..."
+                placeholder="Search position title, company, or location (e.g. Seattle, SDE I, Stripe)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#09090b] border border-[#27272a] focus:border-zinc-500 focus:outline-none text-xs text-white pl-9 pr-4 py-2 rounded-md transition"
+                className="w-full bg-[#faf8f5] border-2 border-[#1e293b] focus:bg-white focus:outline-none font-sans text-xs text-[#1e293b] font-medium pl-10 pr-4 py-2 rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#1e293b]"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
               )}
             </div>
 
-            {/* Select Dropdowns */}
-            <div className="flex flex-wrap items-center gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-2.5 text-xs font-mono font-bold">
               
-              {/* Status Filter */}
-              <div className="flex items-center gap-1.5 bg-[#09090b] border border-[#27272a] px-2.5 py-1.5 rounded-md">
-                <span className="text-zinc-500">Status:</span>
+              <div className="flex items-center gap-1.5 bg-[#fef9c3] border-2 border-[#1e293b] px-2.5 py-1.5 rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]">
+                <span className="text-[#1e293b]">Status:</span>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-transparent text-white focus:outline-none font-medium cursor-pointer"
+                  className="bg-transparent text-[#1e293b] focus:outline-none font-bold cursor-pointer"
                 >
                   <option value="All">All Statuses</option>
-                  <option value="New Drop">⚡ New Drop</option>
-                  <option value="Applied">✓ Applied</option>
-                  <option value="Interviewing">💬 Interviewing</option>
-                  <option value="Offer">🎉 Offer</option>
+                  <option value="New Drop">New Drop</option>
+                  <option value="Applied">Applied</option>
+                  <option value="Interviewing">Interviewing</option>
+                  <option value="Offer">Offer</option>
                   <option value="Rejected">Rejected</option>
                 </select>
               </div>
 
-              {/* Role Filter */}
-              <div className="flex items-center gap-1.5 bg-[#09090b] border border-[#27272a] px-2.5 py-1.5 rounded-md">
-                <span className="text-zinc-500">Role:</span>
+              <div className="flex items-center gap-1.5 bg-[#dcfce7] border-2 border-[#1e293b] px-2.5 py-1.5 rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]">
+                <span className="text-[#1e293b]">Role:</span>
                 <select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
-                  className="bg-transparent text-white focus:outline-none font-medium cursor-pointer"
+                  className="bg-transparent text-[#1e293b] focus:outline-none font-bold cursor-pointer"
                 >
                   <option value="All">All Roles</option>
-                  <option value="Software Engineer">SWE / SDE</option>
-                  <option value="Product Manager">PM / Product</option>
+                  <option value="Software Engineer">SWE / SDE I</option>
+                  <option value="Product Manager">APM / Product</option>
                 </select>
               </div>
 
-              {/* Company Filter */}
-              <div className="flex items-center gap-1.5 bg-[#09090b] border border-[#27272a] px-2.5 py-1.5 rounded-md">
-                <span className="text-zinc-500">Company:</span>
+              <div className="flex items-center gap-1.5 bg-[#e2e8f0] border-2 border-[#1e293b] px-2.5 py-1.5 rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]">
+                <span className="text-[#1e293b]">Company:</span>
                 <select
                   value={companyFilter}
                   onChange={(e) => setCompanyFilter(e.target.value)}
-                  className="bg-transparent text-white focus:outline-none font-medium cursor-pointer max-w-[130px] truncate"
+                  className="bg-transparent text-[#1e293b] focus:outline-none font-bold cursor-pointer max-w-[130px] truncate"
                 >
                   <option value="All">All 15 Hubs</option>
                   {TARGET_COMPANIES.map((c) => (
@@ -597,29 +646,28 @@ export default function Dashboard() {
                 </select>
               </div>
 
-              {/* View Toggle */}
-              <div className="flex items-center bg-[#09090b] border border-[#27272a] rounded-md p-0.5 ml-auto md:ml-0">
+              <div className="flex items-center bg-white border-2 border-[#1e293b] p-0.5 rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]">
                 <button
                   onClick={() => setViewMode("cards")}
-                  className={`p-1.5 rounded ${
+                  className={`p-1.5 font-bold transition rounded-xs ${
                     viewMode === "cards"
-                      ? "bg-zinc-800 text-white"
-                      : "text-zinc-500 hover:text-zinc-300"
+                      ? "bg-[#1e293b] text-white"
+                      : "text-[#1e293b] hover:bg-[#e2e8f0]"
                   }`}
                   title="Card View"
                 >
-                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <LayoutGrid className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setViewMode("table")}
-                  className={`p-1.5 rounded ${
+                  className={`p-1.5 font-bold transition rounded-xs ${
                     viewMode === "table"
-                      ? "bg-zinc-800 text-white"
-                      : "text-zinc-500 hover:text-zinc-300"
+                      ? "bg-[#1e293b] text-white"
+                      : "text-[#1e293b] hover:bg-[#e2e8f0]"
                   }`}
                   title="Table View"
                 >
-                  <List className="w-3.5 h-3.5" />
+                  <List className="w-4 h-4" />
                 </button>
               </div>
 
@@ -627,13 +675,13 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* 4. Direct Action Job Listings */}
+        {/* Job Listings View */}
         {filteredJobs.length === 0 ? (
-          <div className="bg-[#18181b] border border-[#27272a] p-12 text-center rounded-lg space-y-3">
-            <Briefcase className="w-8 h-8 mx-auto text-zinc-600" />
-            <h3 className="text-sm font-medium text-zinc-300">No matching job drops found</h3>
-            <p className="text-xs text-zinc-500 max-w-sm mx-auto">
-              Try adjusting your search query, status filters, or company parameters.
+          <div className="bg-white border-2 border-[#1e293b] p-10 text-center rounded-md shadow-[3px_3px_0px_0px_#1e293b] space-y-3">
+            <Briefcase className="w-8 h-8 mx-auto text-[#1e293b]" />
+            <h3 className="font-display font-bold text-base text-[#1e293b]">No matching position records found</h3>
+            <p className="font-sans text-xs text-[#64748b] max-w-sm mx-auto">
+              Adjust your search keywords or dropdown filters.
             </p>
             <button
               onClick={() => {
@@ -642,85 +690,83 @@ export default function Dashboard() {
                 setRoleFilter("All");
                 setCompanyFilter("All");
               }}
-              className="text-xs text-emerald-400 hover:underline pt-2 inline-block"
+              className="soft-brutal-btn bg-[#dcfce7] text-[#1e293b] px-3.5 py-1.5 text-xs rounded-md inline-block font-bold"
             >
-              Clear all filters
+              Reset filters
             </button>
           </div>
         ) : viewMode === "cards" ? (
-          /* Cards View Grid */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5">
             {filteredJobs.map((job) => (
               <div
                 key={job.job_id}
-                className="bg-[#18181b] border border-[#27272a] hover:border-zinc-700 p-4 rounded-lg flex flex-col justify-between transition group relative"
+                className="soft-brutal-card p-4.5 rounded-md flex flex-col justify-between relative group"
               >
                 <div>
-                  {/* Company & ATS Header */}
-                  <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-xs text-white bg-zinc-800 border border-zinc-700 px-2 py-0.5 rounded">
+                      <span className="font-mono font-bold text-xs text-white bg-[#1e293b] px-2.5 py-0.5 rounded-sm shadow-[1.5px_1.5px_0px_0px_#1e293b]">
                         {job.company}
                       </span>
-                      <span className="text-[10px] text-zinc-500 font-mono">
-                        {job.ats}
+                      <span className="font-mono text-[11px] font-bold text-[#1e293b] bg-[#dcfce7] border border-[#1e293b] px-2 py-0.5 rounded-sm">
+                        New Grad
                       </span>
                     </div>
 
-                    {/* Status Pill */}
+                    {/* Status Select Pill */}
                     <select
                       value={job.status}
                       onChange={(e) => handleUpdateStatus(job.job_id, e.target.value)}
-                      className={`text-[11px] font-medium px-2 py-0.5 rounded-full border cursor-pointer focus:outline-none ${
+                      className={`font-mono text-[11px] font-bold px-2.5 py-0.5 rounded-sm border-2 border-[#1e293b] cursor-pointer focus:outline-none shadow-[1.5px_1.5px_0px_0px_#1e293b] ${
                         job.status === "New Drop"
-                          ? "bg-amber-950/60 border-amber-800 text-amber-400"
+                          ? "bg-[#fef9c3] text-[#1e293b]"
                           : job.status === "Applied"
-                          ? "bg-emerald-950/60 border-emerald-800 text-emerald-400"
+                          ? "bg-[#dcfce7] text-[#1e293b]"
                           : job.status === "Interviewing"
-                          ? "bg-blue-950/60 border-blue-800 text-blue-400"
+                          ? "bg-[#e2e8f0] text-[#1e293b]"
                           : job.status === "Offer"
-                          ? "bg-purple-950/60 border-purple-800 text-purple-400"
-                          : "bg-zinc-900 border-zinc-700 text-zinc-400"
+                          ? "bg-[#bbf7d0] text-[#1e293b]"
+                          : "bg-[#f1f5f9] text-[#64748b]"
                       }`}
                     >
-                      <option value="New Drop">⚡ New Drop</option>
-                      <option value="Applied">✓ Applied</option>
-                      <option value="Interviewing">💬 Interviewing</option>
-                      <option value="Offer">🎉 Offer</option>
+                      <option value="New Drop">New Drop</option>
+                      <option value="Applied">Applied</option>
+                      <option value="Interviewing">Interviewing</option>
+                      <option value="Offer">Offer</option>
                       <option value="Rejected">Rejected</option>
                     </select>
                   </div>
 
-                  {/* Job Title */}
-                  <h3 className="font-semibold text-sm text-zinc-100 group-hover:text-white line-clamp-2 leading-snug">
+                  {/* Position Title */}
+                  <h3 className="font-display font-bold text-base text-[#1e293b] leading-snug tracking-tight">
                     {job.title}
                   </h3>
 
-                  {/* Metadata Row */}
-                  <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-zinc-400">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-zinc-500" />
+                  {/* Metadata */}
+                  <div className="mt-3.5 flex items-center justify-between text-xs font-mono font-bold text-[#475569]">
+                    <div className="flex items-center gap-1.5 bg-[#faf8f5] border border-[#1e293b] px-2 py-0.5 rounded-sm">
+                      <MapPin className="w-3.5 h-3.5 text-[#1e293b]" />
                       <span>{job.location}</span>
                     </div>
-                    <div className="flex items-center gap-1 mono-font text-[11px] text-zinc-500">
-                      <Clock className="w-3 h-3 text-zinc-500" />
+                    <div className="flex items-center gap-1.5 bg-white border border-[#1e293b] px-2 py-0.5 rounded-sm">
+                      <Clock className="w-3.5 h-3.5 text-[#1e293b]" />
                       <span>{formatTimeAgo(job.first_seen_at)}</span>
                     </div>
                   </div>
 
-                  {/* Resume & Notes Preview */}
+                  {/* Logged Notes */}
                   {(job.resume_version || job.notes || job.referral_note) && (
-                    <div className="mt-3 pt-3 border-t border-zinc-800/80 space-y-1 text-xs text-zinc-400">
+                    <div className="mt-3.5 pt-3 border-t-2 border-[#1e293b] space-y-1 text-xs font-mono bg-[#faf8f5] p-2.5 border border-[#1e293b] rounded-sm">
                       {job.resume_version && (
-                        <div className="flex items-center gap-1.5 text-zinc-300 truncate">
-                          <FileText className="w-3 h-3 text-emerald-400 flex-shrink-0" />
-                          <span className="truncate mono-font text-[11px]">
+                        <div className="flex items-center gap-1.5 truncate font-bold text-[#1e293b]">
+                          <FileText className="w-3.5 h-3.5 text-[#1e293b] flex-shrink-0" />
+                          <span className="truncate">
                             {job.resume_version}
                           </span>
                         </div>
                       )}
                       {job.referral_note && (
-                        <p className="text-[11px] text-zinc-400 truncate italic">
+                        <p className="text-[11px] text-[#475569] truncate italic font-medium">
                           Ref: {job.referral_note}
                         </p>
                       )}
@@ -728,106 +774,110 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                {/* Card Actions */}
-                <div className="mt-4 pt-3 border-t border-zinc-800/80 flex items-center justify-between gap-2">
+                {/* Footer Actions */}
+                <div className="mt-4.5 pt-3 border-t-2 border-[#1e293b] flex items-center justify-between gap-2">
                   <button
                     onClick={() => handleOpenDrawer(job)}
-                    className="text-xs text-zinc-400 hover:text-white flex items-center gap-1 transition py-1 px-2 rounded hover:bg-zinc-800"
+                    className="font-mono text-xs font-bold text-[#1e293b] hover:bg-[#e2e8f0] flex items-center gap-1 py-1 px-2.5 border border-[#1e293b] rounded-sm transition"
                   >
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>Log Resume / Notes</span>
+                    <FileText className="w-3.5 h-3.5 text-[#1e293b]" />
+                    <span>Notes</span>
                   </button>
 
-                  <button
-                    onClick={() => handleApplyNow(job.job_id, job.url)}
-                    className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded transition ${
-                      job.status === "Applied"
-                        ? "bg-zinc-800 hover:bg-zinc-700 text-emerald-400 border border-zinc-700"
-                        : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm"
-                    }`}
-                  >
-                    <span>{job.status === "Applied" ? "Applied ✓" : "Apply Now"}</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </button>
+                  {job.status !== "Applied" ? (
+                    <button
+                      onClick={() => handleApplyNow(job.job_id, job.url)}
+                      className="soft-brutal-btn flex items-center gap-1.5 text-xs px-3.5 py-1.5 font-bold rounded-md bg-[#dcfce7] text-[#1e293b]"
+                    >
+                      <span>Apply Now</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </button>
+                  ) : (
+                    <span className="text-[11px] font-mono font-bold text-[#64748b] bg-[#faf8f5] px-2 py-1 rounded border border-[#e2e8f0]">
+                      Applied ✓
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         ) : (
           /* Table View */
-          <div className="bg-[#18181b] border border-[#27272a] rounded-lg overflow-x-auto">
+          <div className="bg-white border-2 border-[#1e293b] shadow-[3px_3px_0px_0px_#1e293b] rounded-md overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-[#27272a] text-zinc-400 bg-zinc-900/50">
-                  <th className="p-3 font-medium">Company</th>
-                  <th className="p-3 font-medium">Role & Title</th>
-                  <th className="p-3 font-medium">Location</th>
-                  <th className="p-3 font-medium">Detected</th>
-                  <th className="p-3 font-medium">Status</th>
-                  <th className="p-3 font-medium">Logged Resume</th>
-                  <th className="p-3 font-medium text-right">Actions</th>
+                <tr className="border-b-2 border-[#1e293b] font-display font-bold text-[#1e293b] bg-[#fef9c3]">
+                  <th className="p-3.5 border-r border-[#1e293b]">Company</th>
+                  <th className="p-3.5 border-r border-[#1e293b]">Position Title</th>
+                  <th className="p-3.5 border-r border-[#1e293b]">Location</th>
+                  <th className="p-3.5 border-r border-[#1e293b]">Detected</th>
+                  <th className="p-3.5 border-r border-[#1e293b]">Status</th>
+                  <th className="p-3.5 border-r border-[#1e293b]">Logged Resume</th>
+                  <th className="p-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800/60">
+              <tbody className="divide-y border-[#1e293b] font-mono text-xs">
                 {filteredJobs.map((job) => (
-                  <tr key={job.job_id} className="hover:bg-zinc-900/40 transition">
-                    <td className="p-3 font-medium text-white whitespace-nowrap">
+                  <tr key={job.job_id} className="hover:bg-[#faf8f5] transition">
+                    <td className="p-3.5 font-bold text-[#1e293b] whitespace-nowrap border-r border-[#1e293b]">
                       {job.company}
                     </td>
-                    <td className="p-3 font-medium text-zinc-200 max-w-xs truncate">
+                    <td className="p-3.5 text-[#1e293b] max-w-xs truncate border-r border-[#1e293b] font-sans font-medium">
                       {job.title}
                     </td>
-                    <td className="p-3 text-zinc-400 whitespace-nowrap">
+                    <td className="p-3.5 text-[#475569] whitespace-nowrap border-r border-[#1e293b]">
                       {job.location}
                     </td>
-                    <td className="p-3 text-zinc-500 mono-font text-[11px] whitespace-nowrap">
+                    <td className="p-3.5 text-[#475569] whitespace-nowrap border-r border-[#1e293b]">
                       {formatTimeAgo(job.first_seen_at)}
                     </td>
-                    <td className="p-3 whitespace-nowrap">
+                    <td className="p-3.5 whitespace-nowrap border-r border-[#1e293b]">
                       <select
                         value={job.status}
                         onChange={(e) => handleUpdateStatus(job.job_id, e.target.value)}
-                        className={`text-[11px] font-medium px-2 py-0.5 rounded-full border cursor-pointer focus:outline-none ${
+                        className={`text-[11px] font-bold px-2 py-0.5 border border-[#1e293b] cursor-pointer focus:outline-none rounded-sm ${
                           job.status === "New Drop"
-                            ? "bg-amber-950/60 border-amber-800 text-amber-400"
+                            ? "bg-[#fef9c3] text-[#1e293b]"
                             : job.status === "Applied"
-                            ? "bg-emerald-950/60 border-emerald-800 text-emerald-400"
+                            ? "bg-[#dcfce7] text-[#1e293b]"
                             : job.status === "Interviewing"
-                            ? "bg-blue-950/60 border-blue-800 text-blue-400"
+                            ? "bg-[#e2e8f0] text-[#1e293b]"
                             : job.status === "Offer"
-                            ? "bg-purple-950/60 border-purple-800 text-purple-400"
-                            : "bg-zinc-900 border-zinc-700 text-zinc-400"
+                            ? "bg-[#bbf7d0] text-[#1e293b]"
+                            : "bg-[#f1f5f9] text-[#64748b]"
                         }`}
                       >
-                        <option value="New Drop">⚡ New Drop</option>
-                        <option value="Applied">✓ Applied</option>
-                        <option value="Interviewing">💬 Interviewing</option>
-                        <option value="Offer">🎉 Offer</option>
+                        <option value="New Drop">New Drop</option>
+                        <option value="Applied">Applied</option>
+                        <option value="Interviewing">Interviewing</option>
+                        <option value="Offer">Offer</option>
                         <option value="Rejected">Rejected</option>
                       </select>
                     </td>
-                    <td className="p-3 text-zinc-400 mono-font text-[11px] max-w-[150px] truncate">
+                    <td className="p-3.5 text-[#475569] max-w-[150px] truncate border-r border-[#1e293b]">
                       {job.resume_version || "-"}
                     </td>
-                    <td className="p-3 text-right whitespace-nowrap space-x-2">
+                    <td className="p-3.5 text-right whitespace-nowrap space-x-2">
                       <button
                         onClick={() => handleOpenDrawer(job)}
-                        className="text-zinc-400 hover:text-white p-1 rounded hover:bg-zinc-800 inline-block"
+                        className="soft-brutal-btn bg-white text-[#1e293b] p-1 text-xs inline-block rounded-sm"
                         title="Edit Notes"
                       >
                         <FileText className="w-3.5 h-3.5" />
                       </button>
-                      <button
-                        onClick={() => handleApplyNow(job.job_id, job.url)}
-                        className={`inline-flex items-center gap-1 font-medium px-2.5 py-1 rounded transition ${
-                          job.status === "Applied"
-                            ? "bg-zinc-800 text-emerald-400 border border-zinc-700"
-                            : "bg-emerald-600 hover:bg-emerald-500 text-white"
-                        }`}
-                      >
-                        <span>{job.status === "Applied" ? "Applied" : "Apply"}</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </button>
+                      {job.status !== "Applied" ? (
+                        <button
+                          onClick={() => handleApplyNow(job.job_id, job.url)}
+                          className="soft-brutal-btn px-3 py-1 text-xs inline-flex items-center gap-1 font-bold rounded-sm bg-[#dcfce7] text-[#1e293b]"
+                        >
+                          <span>Apply</span>
+                          <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                        </button>
+                      ) : (
+                        <span className="text-[11px] font-mono font-bold text-[#64748b] bg-[#faf8f5] px-2 py-0.5 rounded border border-[#e2e8f0]">
+                          Applied ✓
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -837,108 +887,97 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* 5. Resume & Notes Drawer Modal */}
+      {/* Drawer Form Modal */}
       {activeDrawerJob && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs">
-          <div className="bg-[#18181b] border-l border-[#27272a] w-full max-w-md h-full flex flex-col justify-between p-6 overflow-y-auto animate-in slide-in-from-right duration-200">
+        <div className="fixed inset-0 z-50 flex justify-end bg-[#1e293b]/30 backdrop-blur-2xs">
+          <div className="bg-white border-l-2 border-[#1e293b] w-full max-w-md h-full flex flex-col justify-between p-6 overflow-y-auto shadow-[6px_0px_0px_0px_#1e293b] animate-in slide-in-from-right duration-200">
             <div>
-              {/* Drawer Header */}
-              <div className="flex items-start justify-between gap-4 pb-4 border-b border-zinc-800">
+              <div className="flex items-start justify-between gap-4 pb-4 border-b-2 border-[#1e293b]">
                 <div>
-                  <span className="text-xs font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2 py-0.5 rounded">
+                  <span className="font-mono font-bold text-xs text-white bg-[#1e293b] px-2.5 py-0.5 rounded-sm">
                     {activeDrawerJob.company}
                   </span>
-                  <h2 className="font-bold text-base text-white mt-1.5 leading-snug">
+                  <h2 className="font-display font-bold text-lg text-[#1e293b] mt-2 leading-snug">
                     {activeDrawerJob.title}
                   </h2>
-                  <p className="text-xs text-zinc-400 mt-1">{activeDrawerJob.location}</p>
+                  <p className="font-mono text-xs text-[#475569] mt-1">{activeDrawerJob.location}</p>
                 </div>
                 <button
                   onClick={() => setActiveDrawerJob(null)}
-                  className="text-zinc-500 hover:text-white p-1 rounded-md"
+                  className="soft-brutal-btn bg-white text-[#1e293b] p-1 rounded-sm"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Form Content */}
-              <form onSubmit={handleSaveDrawerNotes} className="mt-6 space-y-4 text-xs">
-                
-                {/* Application Status */}
+              <form onSubmit={handleSaveDrawerNotes} className="mt-6 space-y-4 font-mono text-xs font-bold">
                 <div>
-                  <label className="block font-medium text-zinc-300 mb-1.5">
+                  <label className="block text-[#1e293b] mb-1.5">
                     Pipeline Status
                   </label>
                   <select
                     value={drawerForm.status}
                     onChange={(e) => setDrawerForm({ ...drawerForm, status: e.target.value })}
-                    className="w-full bg-[#09090b] border border-[#27272a] text-white p-2.5 rounded-md focus:border-zinc-500 focus:outline-none"
+                    className="w-full bg-[#faf8f5] border-2 border-[#1e293b] text-[#1e293b] p-2.5 focus:outline-none rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]"
                   >
-                    <option value="New Drop">⚡ New Drop</option>
-                    <option value="Applied">✓ Applied</option>
-                    <option value="Interviewing">💬 Interviewing</option>
-                    <option value="Offer">🎉 Offer</option>
+                    <option value="New Drop">New Drop</option>
+                    <option value="Applied">Applied</option>
+                    <option value="Interviewing">Interviewing</option>
+                    <option value="Offer">Offer</option>
                     <option value="Rejected">Rejected</option>
                   </select>
                 </div>
 
-                {/* Resume Version Log */}
                 <div>
-                  <label className="block font-medium text-zinc-300 mb-1.5">
-                    Resume Variant Used
+                  <label className="block text-[#1e293b] mb-1.5">
+                    Resume Variant Submitted
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. SWE_Backend_v3_Stripe.pdf"
+                    placeholder="e.g. SWE_NewGrad_v3_Stripe.pdf"
                     value={drawerForm.resume_version}
                     onChange={(e) => setDrawerForm({ ...drawerForm, resume_version: e.target.value })}
-                    className="w-full bg-[#09090b] border border-[#27272a] text-white p-2.5 rounded-md focus:border-zinc-500 focus:outline-none mono-font"
+                    className="w-full bg-[#faf8f5] border-2 border-[#1e293b] text-[#1e293b] p-2.5 focus:outline-none rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]"
                   />
-                  <p className="text-[11px] text-zinc-500 mt-1">
-                    Keep track of which tailored resume variant was submitted.
-                  </p>
                 </div>
 
-                {/* Referral & Recruiter Note */}
                 <div>
-                  <label className="block font-medium text-zinc-300 mb-1.5">
+                  <label className="block text-[#1e293b] mb-1.5">
                     Referral / Recruiter Contact
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Referred by Jane (L6 SWE) / Recruiter DM on LinkedIn"
+                    placeholder="e.g. Referred by University Alumni / Technical Recruiter"
                     value={drawerForm.referral_note}
                     onChange={(e) => setDrawerForm({ ...drawerForm, referral_note: e.target.value })}
-                    className="w-full bg-[#09090b] border border-[#27272a] text-white p-2.5 rounded-md focus:border-zinc-500 focus:outline-none"
+                    className="w-full bg-[#faf8f5] border-2 border-[#1e293b] text-[#1e293b] p-2.5 focus:outline-none rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]"
                   />
                 </div>
 
-                {/* Interview Notes & Free Form Log */}
                 <div>
-                  <label className="block font-medium text-zinc-300 mb-1.5">
+                  <label className="block text-[#1e293b] mb-1.5">
                     Application & Interview Notes
                   </label>
                   <textarea
                     rows={4}
-                    placeholder="Record interview dates, tech screen topics, salary disclosures..."
+                    placeholder="Notes on OA assessment completion, screen dates, topics..."
                     value={drawerForm.notes}
                     onChange={(e) => setDrawerForm({ ...drawerForm, notes: e.target.value })}
-                    className="w-full bg-[#09090b] border border-[#27272a] text-white p-2.5 rounded-md focus:border-zinc-500 focus:outline-none resize-none"
+                    className="w-full bg-[#faf8f5] border-2 border-[#1e293b] text-[#1e293b] p-2.5 focus:outline-none resize-none rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]"
                   />
                 </div>
 
-                {/* Submit Action */}
                 <div className="pt-4 flex items-center gap-3">
                   <button
                     type="submit"
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 rounded-md transition text-xs shadow-sm"
+                    className="soft-brutal-btn flex-1 bg-[#dcfce7] text-[#1e293b] py-2.5 text-xs font-bold rounded-md"
                   >
                     Save Changes
                   </button>
                   <button
                     type="button"
                     onClick={() => setActiveDrawerJob(null)}
-                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium px-4 py-2 rounded-md transition text-xs border border-zinc-700"
+                    className="soft-brutal-btn bg-white text-[#1e293b] px-4 py-2.5 text-xs font-bold rounded-md"
                   >
                     Cancel
                   </button>
@@ -946,43 +985,42 @@ export default function Dashboard() {
               </form>
             </div>
 
-            {/* Direct Portal Link */}
-            <div className="pt-6 border-t border-zinc-800 text-xs text-zinc-400">
+            <div className="pt-6 border-t-2 border-[#1e293b] text-xs font-mono font-bold">
               <a
                 href={activeDrawerJob.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between text-zinc-300 hover:text-white p-2 bg-zinc-900 border border-zinc-800 rounded-md transition"
+                className="soft-brutal-btn flex items-center justify-between bg-white text-[#1e293b] p-2.5 rounded-md"
               >
-                <span>Direct Career Portal Link</span>
-                <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Direct Application Link</span>
+                <ExternalLink className="w-4 h-4 stroke-[2.5]" />
               </a>
             </div>
           </div>
         </div>
       )}
 
-      {/* 6. Manual Add Job Modal */}
+      {/* Manual Add Position Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
-          <div className="bg-[#18181b] border border-[#27272a] w-full max-w-md rounded-lg p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
-              <h3 className="font-bold text-sm text-white">Add Manual Job Tracking Entry</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1e293b]/30 backdrop-blur-2xs">
+          <div className="bg-white border-2 border-[#1e293b] w-full max-w-md p-6 space-y-4 rounded-md shadow-[5px_5px_0px_0px_#1e293b] animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-[#1e293b]">
+              <h3 className="font-display font-bold text-base text-[#1e293b]">Add New Position</h3>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-zinc-500 hover:text-white"
+                className="soft-brutal-btn bg-white text-[#1e293b] p-1 rounded-sm"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleAddManualJob} className="space-y-3 text-xs">
+            <form onSubmit={handleAddManualJob} className="space-y-3 font-mono text-xs font-bold">
               <div>
-                <label className="block font-medium text-zinc-400 mb-1">Company</label>
+                <label className="block text-[#1e293b] mb-1">Company</label>
                 <select
                   value={newJobForm.company}
                   onChange={(e) => setNewJobForm({ ...newJobForm, company: e.target.value })}
-                  className="w-full bg-[#09090b] border border-[#27272a] text-white p-2 rounded-md focus:border-zinc-500 focus:outline-none"
+                  className="w-full bg-[#faf8f5] border-2 border-[#1e293b] text-[#1e293b] p-2 rounded-md focus:outline-none shadow-[1.5px_1.5px_0px_0px_#1e293b]"
                 >
                   {TARGET_COMPANIES.map((c) => (
                     <option key={c} value={c}>
@@ -993,33 +1031,33 @@ export default function Dashboard() {
               </div>
 
               <div>
-                <label className="block font-medium text-zinc-400 mb-1">Job Title</label>
+                <label className="block text-[#1e293b] mb-1">Position Title</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Senior Software Engineer - Infrastructure"
+                  placeholder="e.g. Software Engineer - New Grad 2026"
                   value={newJobForm.title}
                   onChange={(e) => setNewJobForm({ ...newJobForm, title: e.target.value })}
-                  className="w-full bg-[#09090b] border border-[#27272a] text-white p-2 rounded-md focus:border-zinc-500 focus:outline-none"
+                  className="w-full bg-[#faf8f5] border-2 border-[#1e293b] text-[#1e293b] p-2 rounded-md focus:outline-none shadow-[1.5px_1.5px_0px_0px_#1e293b]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block font-medium text-zinc-400 mb-1">Location</label>
+                  <label className="block text-[#1e293b] mb-1">Location</label>
                   <input
                     type="text"
                     value={newJobForm.location}
                     onChange={(e) => setNewJobForm({ ...newJobForm, location: e.target.value })}
-                    className="w-full bg-[#09090b] border border-[#27272a] text-white p-2 rounded-md focus:border-zinc-500 focus:outline-none"
+                    className="w-full bg-[#faf8f5] border-2 border-[#1e293b] text-[#1e293b] p-2 rounded-md focus:outline-none shadow-[1.5px_1.5px_0px_0px_#1e293b]"
                   />
                 </div>
                 <div>
-                  <label className="block font-medium text-zinc-400 mb-1">Role Category</label>
+                  <label className="block text-[#1e293b] mb-1">Role Category</label>
                   <select
                     value={newJobForm.role_category}
                     onChange={(e) => setNewJobForm({ ...newJobForm, role_category: e.target.value })}
-                    className="w-full bg-[#09090b] border border-[#27272a] text-white p-2 rounded-md focus:border-zinc-500 focus:outline-none"
+                    className="w-full bg-[#faf8f5] border-2 border-[#1e293b] text-[#1e293b] p-2 rounded-md focus:outline-none shadow-[1.5px_1.5px_0px_0px_#1e293b]"
                   >
                     <option value="Software Engineer">Software Engineer</option>
                     <option value="Product Manager">Product Manager</option>
@@ -1028,14 +1066,14 @@ export default function Dashboard() {
               </div>
 
               <div>
-                <label className="block font-medium text-zinc-400 mb-1">Application URL</label>
+                <label className="block text-[#1e293b] mb-1">Application URL</label>
                 <input
                   type="url"
                   required
                   placeholder="https://..."
                   value={newJobForm.url}
                   onChange={(e) => setNewJobForm({ ...newJobForm, url: e.target.value })}
-                  className="w-full bg-[#09090b] border border-[#27272a] text-white p-2 rounded-md focus:border-zinc-500 focus:outline-none"
+                  className="w-full bg-[#faf8f5] border-2 border-[#1e293b] text-[#1e293b] p-2 rounded-md focus:outline-none shadow-[1.5px_1.5px_0px_0px_#1e293b]"
                 />
               </div>
 
@@ -1043,15 +1081,15 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-3 py-1.5 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                  className="soft-brutal-btn bg-white text-[#1e293b] px-3.5 py-1.5 text-xs rounded-md"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-3 py-1.5 rounded bg-emerald-600 text-white font-medium hover:bg-emerald-500"
+                  className="soft-brutal-btn bg-[#dcfce7] text-[#1e293b] px-3.5 py-1.5 text-xs rounded-md"
                 >
-                  Add Job Record
+                  Add Entry
                 </button>
               </div>
             </form>
