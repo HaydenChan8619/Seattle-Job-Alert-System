@@ -24,7 +24,9 @@ import {
   ArrowUpRight,
   Database,
   Check,
-  Building2
+  Building2,
+  Trash2,
+  Undo2
 } from "lucide-react";
 
 // Target Companies Config
@@ -167,6 +169,12 @@ export default function Dashboard() {
     role_category: "Software Engineer"
   });
 
+  // Undo Toast State
+  const [deletedToast, setDeletedToast] = useState(null);
+
+  // Pending Application Confirmation Modal State
+  const [pendingApplyJob, setPendingApplyJob] = useState(null);
+
   // Fetch Live Jobs from DynamoDB API
   const fetchLiveDynamoDBJobs = async () => {
     setIsRefreshing(true);
@@ -175,20 +183,18 @@ export default function Dashboard() {
       const data = await res.json();
       if (data.live && Array.isArray(data.jobs)) {
         setIsLiveConnected(true);
-        if (data.jobs.length > 0) {
-          const normalizedLiveJobs = data.jobs.map((j) => ({
-            ...j,
-            first_seen_at:
-              j.first_seen_at && j.first_seen_at < 10000000000
-                ? j.first_seen_at * 1000
-                : j.first_seen_at || Date.now(),
-            ats: j.ats || "Live Scraper",
-            status: (j.status || "New Drop").replace(/[^\w\s]/gi, "").trim(),
-            role_level: "New Grad"
-          }));
-          setJobs(normalizedLiveJobs);
-          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(normalizedLiveJobs));
-        }
+        const normalizedLiveJobs = data.jobs.map((j) => ({
+          ...j,
+          first_seen_at:
+            j.first_seen_at && j.first_seen_at < 10000000000
+              ? j.first_seen_at * 1000
+              : j.first_seen_at || Date.now(),
+          ats: j.ats || "Live Scraper",
+          status: (j.status || "New Drop").replace(/[^\w\s]/gi, "").trim(),
+          role_level: "New Grad"
+        }));
+        setJobs(normalizedLiveJobs);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(normalizedLiveJobs));
       } else {
         loadLocalStorage();
       }
@@ -236,6 +242,75 @@ export default function Dashboard() {
       } catch (err) {
         console.warn("DynamoDB sync error:", err);
       }
+    }
+  };
+
+  const handleDeleteJob = async (jobToDelete) => {
+    if (deletedToast && deletedToast.intervalId) {
+      clearInterval(deletedToast.intervalId);
+    }
+
+    const updatedJobs = jobs.filter((j) => j.job_id !== jobToDelete.job_id);
+    setJobs(updatedJobs);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedJobs));
+    } catch (e) {
+      console.error("Failed to save to LocalStorage:", e);
+    }
+
+    try {
+      await fetch(`/api/jobs?job_id=${encodeURIComponent(jobToDelete.job_id)}`, {
+        method: "DELETE"
+      });
+    } catch (err) {
+      console.warn("DynamoDB delete error:", err);
+    }
+
+    let secondsLeft = 5;
+    const intervalId = setInterval(() => {
+      secondsLeft -= 1;
+      if (secondsLeft <= 0) {
+        clearInterval(intervalId);
+        setDeletedToast(null);
+      } else {
+        setDeletedToast((prev) => (prev ? { ...prev, secondsLeft } : null));
+      }
+    }, 1000);
+
+    setDeletedToast({
+      job: jobToDelete,
+      intervalId,
+      secondsLeft: 5
+    });
+  };
+
+  const handleUndoDelete = async () => {
+    if (!deletedToast || !deletedToast.job) return;
+
+    const jobToRestore = deletedToast.job;
+    if (deletedToast.intervalId) {
+      clearInterval(deletedToast.intervalId);
+    }
+    setDeletedToast(null);
+
+    setJobs((prevJobs) => {
+      const updated = [jobToRestore, ...prevJobs];
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.error("Failed to save to LocalStorage:", e);
+      }
+      return updated;
+    });
+
+    try {
+      await fetch("/api/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(jobToRestore)
+      });
+    } catch (err) {
+      console.warn("DynamoDB restore error:", err);
     }
   };
 
@@ -297,16 +372,21 @@ export default function Dashboard() {
   }, [jobs, searchQuery, statusFilter, roleFilter, companyFilter]);
 
   // Job Action Handlers
-  const handleApplyNow = (jobId, url) => {
-    window.open(url, "_blank", "noopener,noreferrer");
+  const handleApplyNow = (job) => {
+    if (job.url) {
+      window.open(job.url, "_blank", "noopener,noreferrer");
+    }
+    setPendingApplyJob(job);
+  };
 
+  const handleConfirmApplied = (job) => {
     const now = Date.now();
     let modifiedTarget = null;
     const updated = jobs.map((j) => {
-      if (j.job_id === jobId) {
+      if (j.job_id === job.job_id) {
         modifiedTarget = {
           ...j,
-          status: j.status === "New Drop" ? "Applied" : j.status,
+          status: "Applied",
           applied_at: j.applied_at || now
         };
         return modifiedTarget;
@@ -314,6 +394,11 @@ export default function Dashboard() {
       return j;
     });
     saveJobsToStorage(updated, modifiedTarget);
+    setPendingApplyJob(null);
+  };
+
+  const handleCancelApplied = () => {
+    setPendingApplyJob(null);
   };
 
   const handleUpdateStatus = (jobId, newStatus) => {
@@ -713,28 +798,37 @@ export default function Dashboard() {
                       </span>
                     </div>
 
-                    {/* Status Select Pill */}
-                    <select
-                      value={job.status}
-                      onChange={(e) => handleUpdateStatus(job.job_id, e.target.value)}
-                      className={`font-mono text-[11px] font-bold px-2.5 py-0.5 rounded-sm border-2 border-[#1e293b] cursor-pointer focus:outline-none shadow-[1.5px_1.5px_0px_0px_#1e293b] ${
-                        job.status === "New Drop"
-                          ? "bg-[#fef9c3] text-[#1e293b]"
-                          : job.status === "Applied"
-                          ? "bg-[#dcfce7] text-[#1e293b]"
-                          : job.status === "Interviewing"
-                          ? "bg-[#e2e8f0] text-[#1e293b]"
-                          : job.status === "Offer"
-                          ? "bg-[#bbf7d0] text-[#1e293b]"
-                          : "bg-[#f1f5f9] text-[#64748b]"
-                      }`}
-                    >
-                      <option value="New Drop">New Drop</option>
-                      <option value="Applied">Applied</option>
-                      <option value="Interviewing">Interviewing</option>
-                      <option value="Offer">Offer</option>
-                      <option value="Rejected">Rejected</option>
-                    </select>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => handleDeleteJob(job)}
+                        title="Delete position"
+                        className="text-[#64748b] hover:text-[#ef4444] hover:bg-[#fee2e2] p-1 rounded-sm transition border border-transparent hover:border-[#1e293b]"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                      {/* Status Select Pill */}
+                      <select
+                        value={job.status}
+                        onChange={(e) => handleUpdateStatus(job.job_id, e.target.value)}
+                        className={`font-mono text-[11px] font-bold px-2.5 py-0.5 rounded-sm border-2 border-[#1e293b] cursor-pointer focus:outline-none shadow-[1.5px_1.5px_0px_0px_#1e293b] ${
+                          job.status === "New Drop"
+                            ? "bg-[#fef9c3] text-[#1e293b]"
+                            : job.status === "Applied"
+                            ? "bg-[#dcfce7] text-[#1e293b]"
+                            : job.status === "Interviewing"
+                            ? "bg-[#e2e8f0] text-[#1e293b]"
+                            : job.status === "Offer"
+                            ? "bg-[#bbf7d0] text-[#1e293b]"
+                            : "bg-[#f1f5f9] text-[#64748b]"
+                        }`}
+                      >
+                        <option value="New Drop">New Drop</option>
+                        <option value="Applied">Applied</option>
+                        <option value="Interviewing">Interviewing</option>
+                        <option value="Offer">Offer</option>
+                        <option value="Rejected">Rejected</option>
+                      </select>
+                    </div>
                   </div>
 
                   {/* Position Title */}
@@ -786,7 +880,7 @@ export default function Dashboard() {
 
                   {job.status !== "Applied" ? (
                     <button
-                      onClick={() => handleApplyNow(job.job_id, job.url)}
+                      onClick={() => handleApplyNow(job)}
                       className="soft-brutal-btn flex items-center gap-1.5 text-xs px-3.5 py-1.5 font-bold rounded-md bg-[#dcfce7] text-[#1e293b]"
                     >
                       <span>Apply Now</span>
@@ -857,7 +951,7 @@ export default function Dashboard() {
                     <td className="p-3.5 text-[#475569] max-w-[150px] truncate border-r border-[#1e293b]">
                       {job.resume_version || "-"}
                     </td>
-                    <td className="p-3.5 text-right whitespace-nowrap space-x-2">
+                    <td className="p-3.5 text-right whitespace-nowrap space-x-1.5">
                       <button
                         onClick={() => handleOpenDrawer(job)}
                         className="soft-brutal-btn bg-white text-[#1e293b] p-1 text-xs inline-block rounded-sm"
@@ -865,9 +959,16 @@ export default function Dashboard() {
                       >
                         <FileText className="w-3.5 h-3.5" />
                       </button>
+                      <button
+                        onClick={() => handleDeleteJob(job)}
+                        className="soft-brutal-btn bg-white text-[#ef4444] hover:bg-[#fee2e2] p-1 text-xs inline-block rounded-sm"
+                        title="Delete position"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                       {job.status !== "Applied" ? (
                         <button
-                          onClick={() => handleApplyNow(job.job_id, job.url)}
+                          onClick={() => handleApplyNow(job)}
                           className="soft-brutal-btn px-3 py-1 text-xs inline-flex items-center gap-1 font-bold rounded-sm bg-[#dcfce7] text-[#1e293b]"
                         >
                           <span>Apply</span>
@@ -902,12 +1003,25 @@ export default function Dashboard() {
                   </h2>
                   <p className="font-mono text-xs text-[#475569] mt-1">{activeDrawerJob.location}</p>
                 </div>
-                <button
-                  onClick={() => setActiveDrawerJob(null)}
-                  className="soft-brutal-btn bg-white text-[#1e293b] p-1 rounded-sm"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDeleteJob(activeDrawerJob);
+                      setActiveDrawerJob(null);
+                    }}
+                    title="Delete position"
+                    className="soft-brutal-btn bg-[#fee2e2] text-[#ef4444] hover:bg-[#fca5a5] p-1 text-xs font-mono font-bold rounded-sm flex items-center gap-1"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setActiveDrawerJob(null)}
+                    className="soft-brutal-btn bg-white text-[#1e293b] p-1 rounded-sm"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <form onSubmit={handleSaveDrawerNotes} className="mt-6 space-y-4 font-mono text-xs font-bold">
@@ -986,15 +1100,14 @@ export default function Dashboard() {
             </div>
 
             <div className="pt-6 border-t-2 border-[#1e293b] text-xs font-mono font-bold">
-              <a
-                href={activeDrawerJob.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="soft-brutal-btn flex items-center justify-between bg-white text-[#1e293b] p-2.5 rounded-md"
+              <button
+                type="button"
+                onClick={() => handleApplyNow(activeDrawerJob)}
+                className="soft-brutal-btn w-full flex items-center justify-between bg-white text-[#1e293b] p-2.5 rounded-md"
               >
                 <span>Direct Application Link</span>
                 <ExternalLink className="w-4 h-4 stroke-[2.5]" />
-              </a>
+              </button>
             </div>
           </div>
         </div>
@@ -1093,6 +1206,85 @@ export default function Dashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5-Second Undo Delete Toast */}
+      {deletedToast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-[#1e293b] text-white p-3.5 rounded-md shadow-[4px_4px_0px_0px_#000000] border-2 border-[#1e293b] animate-in slide-in-from-bottom-5 duration-200">
+          <div className="flex flex-col">
+            <span className="text-xs font-bold font-mono text-[#fef9c3]">
+              Job Position Deleted
+            </span>
+            <span className="text-xs font-mono text-slate-300 max-w-[220px] truncate">
+              {deletedToast.job?.company} - {deletedToast.job?.title}
+            </span>
+          </div>
+          <button
+            onClick={handleUndoDelete}
+            className="soft-brutal-btn bg-[#dcfce7] text-[#1e293b] hover:bg-[#bbf7d0] px-3 py-1.5 text-xs font-mono font-bold rounded-md flex items-center gap-1.5 transition ml-2"
+          >
+            <Undo2 className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Undo ({deletedToast.secondsLeft}s)</span>
+          </button>
+          <button
+            onClick={() => {
+              if (deletedToast.intervalId) clearInterval(deletedToast.intervalId);
+              setDeletedToast(null);
+            }}
+            className="text-slate-400 hover:text-white p-1 rounded-sm"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Application Confirmation Persistent Modal */}
+      {pendingApplyJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1e293b]/40 backdrop-blur-2xs">
+          <div className="bg-white border-2 border-[#1e293b] w-full max-w-md p-6 space-y-4 rounded-md shadow-[6px_6px_0px_0px_#1e293b] animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between pb-3 border-b-2 border-[#1e293b]">
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-bold text-xs text-white bg-[#1e293b] px-2.5 py-0.5 rounded-sm">
+                  {pendingApplyJob.company}
+                </span>
+                <span className="font-mono text-[11px] font-bold text-[#1e293b] bg-[#fef9c3] border border-[#1e293b] px-2 py-0.5 rounded-sm">
+                  Confirm Application
+                </span>
+              </div>
+              <button
+                onClick={handleCancelApplied}
+                className="soft-brutal-btn bg-white text-[#1e293b] p-1 rounded-sm"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-display font-bold text-base text-[#1e293b] leading-snug">
+                Did you complete your application?
+              </h3>
+              <p className="font-mono text-xs text-[#475569]">
+                Position: <span className="font-bold text-[#1e293b]">{pendingApplyJob.title}</span>
+              </p>
+            </div>
+
+            <div className="pt-4 flex items-center justify-end gap-3 font-mono text-xs font-bold border-t-2 border-[#1e293b]">
+              <button
+                onClick={handleCancelApplied}
+                className="soft-brutal-btn bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold px-5 py-2.5 rounded-md border-2 border-[#1e293b] shadow-[2px_2px_0px_0px_#1e293b]"
+              >
+                No, Not Yet
+              </button>
+              <button
+                onClick={() => handleConfirmApplied(pendingApplyJob)}
+                className="soft-brutal-btn bg-[#16a34a] hover:bg-[#15803d] text-white font-bold px-5 py-2.5 rounded-md border-2 border-[#1e293b] shadow-[2px_2px_0px_0px_#1e293b] flex items-center gap-1.5"
+              >
+                <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                <span>Yes, I Applied</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

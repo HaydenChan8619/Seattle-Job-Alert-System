@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, ScanCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, ScanCommand, PutCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 
 const REGION = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-west-2";
 const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || "seattle_job_tracker";
@@ -89,3 +89,36 @@ export async function POST(request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request) {
+  if (!docClient) {
+    return NextResponse.json({ success: false, message: "DynamoDB client not configured" }, { status: 400 });
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    let jobId = searchParams.get("job_id");
+
+    if (!jobId) {
+      const body = await request.json().catch(() => ({}));
+      jobId = body.job_id;
+    }
+
+    if (!jobId) {
+      return NextResponse.json({ success: false, message: "Missing job_id" }, { status: 400 });
+    }
+
+    const command = new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: { job_id: jobId }
+    });
+
+    await docClient.send(command);
+
+    return NextResponse.json({ success: true, job_id: jobId });
+  } catch (error) {
+    console.error("Error deleting job from DynamoDB:", error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
