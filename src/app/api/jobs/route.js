@@ -28,8 +28,9 @@ export async function GET() {
     const response = await docClient.send(command);
     const items = response.Items || [];
 
-    // Sort jobs by first_seen_at descending (most recent first)
-    const sortedJobs = items.sort((a, b) => (b.first_seen_at || 0) - (a.first_seen_at || 0));
+    // Filter out soft-deleted items and sort by first_seen_at descending
+    const activeJobs = items.filter((item) => item.status !== "Deleted");
+    const sortedJobs = activeJobs.sort((a, b) => (b.first_seen_at || 0) - (a.first_seen_at || 0));
 
     return NextResponse.json({
       live: true,
@@ -52,7 +53,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { job_id, company, title, location, url, first_seen_at, status, role_category, resume_version, referral_note, notes, applied_at } = body;
+    const { job_id, company, title, location, url, first_seen_at, status, role_category, resume_version, referral_note, notes, applied_at, is_viewed, is_flagged } = body;
 
     if (!job_id) {
       return NextResponse.json({ success: false, message: "Missing job_id" }, { status: 400 });
@@ -73,6 +74,8 @@ export async function POST(request) {
       referral_note: referral_note || "",
       notes: notes || "",
       applied_at: applied_at || null,
+      is_viewed: is_viewed ?? false,
+      is_flagged: is_flagged ?? false,
       ttl: ttlTimestamp
     };
 

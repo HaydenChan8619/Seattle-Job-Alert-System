@@ -62,13 +62,14 @@ resource "aws_iam_role_policy_attachment" "attach_policy" {
 
 # 3. AWS Lambda Function
 resource "aws_lambda_function" "job_scraper" {
-  filename      = "lambda_function.zip"
-  function_name = "seattle_job_scraper"
-  role          = aws_iam_role.lambda_exec_role.arn
-  handler       = "lambda_function.lambda_handler"
-  runtime       = "python3.11"
-  timeout       = 60
-  memory_size   = 512
+  filename         = "lambda_function.zip"
+  source_code_hash = filebase64sha256("lambda_function.zip")
+  function_name    = "seattle_job_scraper"
+  role             = aws_iam_role.lambda_exec_role.arn
+  handler          = "lambda_function.lambda_handler"
+  runtime          = "python3.11"
+  timeout          = 60
+  memory_size      = 512
 
   environment {
     variables = {

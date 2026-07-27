@@ -26,7 +26,12 @@ import {
   Check,
   Building2,
   Trash2,
-  Undo2
+  Undo2,
+  Flag,
+  Bookmark,
+  Eye,
+  EyeOff,
+  Star
 } from "lucide-react";
 
 // Target Companies Config
@@ -36,7 +41,7 @@ const TARGET_COMPANIES = [
   "Meta", "Uber", "LinkedIn", "NVIDIA", "Oracle"
 ];
 
-// Clean Dataset
+// Clean Initial Dataset with Viewed & Flagged defaults
 const INITIAL_NEW_GRAD_JOBS = [
   {
     job_id: "stripe_ng_829104",
@@ -52,7 +57,9 @@ const INITIAL_NEW_GRAD_JOBS = [
     role_level: "New Grad",
     resume_version: "",
     referral_note: "",
-    notes: ""
+    notes: "",
+    is_viewed: false,
+    is_flagged: true
   },
   {
     job_id: "databricks_ng_736201",
@@ -68,7 +75,9 @@ const INITIAL_NEW_GRAD_JOBS = [
     role_level: "New Grad",
     resume_version: "",
     referral_note: "",
-    notes: ""
+    notes: "",
+    is_viewed: false,
+    is_flagged: false
   },
   {
     job_id: "amazon_icims_ng_991823",
@@ -84,7 +93,9 @@ const INITIAL_NEW_GRAD_JOBS = [
     role_level: "New Grad",
     resume_version: "SWE_NewGrad_v3_AWS.pdf",
     referral_note: "Contacted AWS Technical Recruiter on LinkedIn",
-    notes: "Submitted 5 minutes post release."
+    notes: "Submitted 5 minutes post release.",
+    is_viewed: true,
+    is_flagged: true
   },
   {
     job_id: "msft_ng_982103",
@@ -100,7 +111,9 @@ const INITIAL_NEW_GRAD_JOBS = [
     role_level: "New Grad",
     resume_version: "SWE_University_v2.pdf",
     referral_note: "Submitted campus referral code",
-    notes: "First round technical screen scheduled."
+    notes: "First round technical screen scheduled.",
+    is_viewed: true,
+    is_flagged: false
   },
   {
     job_id: "snowflake_ng_621900",
@@ -116,7 +129,9 @@ const INITIAL_NEW_GRAD_JOBS = [
     role_level: "New Grad",
     resume_version: "",
     referral_note: "",
-    notes: ""
+    notes: "",
+    is_viewed: false,
+    is_flagged: false
   },
   {
     job_id: "google_ng_102938",
@@ -132,7 +147,9 @@ const INITIAL_NEW_GRAD_JOBS = [
     role_level: "New Grad",
     resume_version: "SWE_EarlyCareer_v1.pdf",
     referral_note: "Alumni referral link attached",
-    notes: "Application completed."
+    notes: "Application completed.",
+    is_viewed: true,
+    is_flagged: false
   }
 ];
 
@@ -149,6 +166,8 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [roleFilter, setRoleFilter] = useState("All");
   const [companyFilter, setCompanyFilter] = useState("All");
+  const [viewedFilter, setViewedFilter] = useState("All"); // All | Unviewed | Viewed
+  const [flaggedOnlyFilter, setFlaggedOnlyFilter] = useState(false);
   const [viewMode, setViewMode] = useState("cards");
 
   // Modal / Drawer State
@@ -157,7 +176,9 @@ export default function Dashboard() {
     resume_version: "",
     referral_note: "",
     notes: "",
-    status: "Applied"
+    status: "Applied",
+    is_viewed: false,
+    is_flagged: false
   });
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -166,7 +187,8 @@ export default function Dashboard() {
     title: "",
     location: "Seattle, WA",
     url: "",
-    role_category: "Software Engineer"
+    role_category: "Software Engineer",
+    is_flagged: false
   });
 
   // Undo Toast State
@@ -191,7 +213,9 @@ export default function Dashboard() {
               : j.first_seen_at || Date.now(),
           ats: j.ats || "Live Scraper",
           status: (j.status || "New Drop").replace(/[^\w\s]/gi, "").trim(),
-          role_level: "New Grad"
+          role_level: "New Grad",
+          is_viewed: j.is_viewed !== undefined ? Boolean(j.is_viewed) : (j.status && j.status !== "New Drop"),
+          is_flagged: Boolean(j.is_flagged)
         }));
         setJobs(normalizedLiveJobs);
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(normalizedLiveJobs));
@@ -210,7 +234,13 @@ export default function Dashboard() {
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (stored) {
-        setJobs(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        const normalized = parsed.map((j) => ({
+          ...j,
+          is_viewed: j.is_viewed !== undefined ? Boolean(j.is_viewed) : (j.status && j.status !== "New Drop"),
+          is_flagged: Boolean(j.is_flagged)
+        }));
+        setJobs(normalized);
       } else {
         setJobs(INITIAL_NEW_GRAD_JOBS);
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(INITIAL_NEW_GRAD_JOBS));
@@ -250,21 +280,9 @@ export default function Dashboard() {
       clearInterval(deletedToast.intervalId);
     }
 
-    const updatedJobs = jobs.filter((j) => j.job_id !== jobToDelete.job_id);
-    setJobs(updatedJobs);
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedJobs));
-    } catch (e) {
-      console.error("Failed to save to LocalStorage:", e);
-    }
-
-    try {
-      await fetch(`/api/jobs?job_id=${encodeURIComponent(jobToDelete.job_id)}`, {
-        method: "DELETE"
-      });
-    } catch (err) {
-      console.warn("DynamoDB delete error:", err);
-    }
+    const softDeletedJob = { ...jobToDelete, status: "Deleted" };
+    const updatedJobs = jobs.map((j) => (j.job_id === jobToDelete.job_id ? softDeletedJob : j));
+    saveJobsToStorage(updatedJobs, softDeletedJob);
 
     let secondsLeft = 5;
     const intervalId = setInterval(() => {
@@ -316,13 +334,16 @@ export default function Dashboard() {
 
   // Calculated Analytics Metrics
   const metrics = useMemo(() => {
-    const total = jobs.length;
-    const newDrops = jobs.filter((j) => j.status === "New Drop").length;
-    const applied = jobs.filter((j) => j.status === "Applied").length;
-    const interviewing = jobs.filter((j) => j.status === "Interviewing").length;
-    const offer = jobs.filter((j) => j.status === "Offer").length;
+    const activeJobs = jobs.filter((j) => j.status !== "Deleted");
+    const total = activeJobs.length;
+    const newDrops = activeJobs.filter((j) => j.status === "New Drop").length;
+    const applied = activeJobs.filter((j) => j.status === "Applied").length;
+    const interviewing = activeJobs.filter((j) => j.status === "Interviewing").length;
+    const offer = activeJobs.filter((j) => j.status === "Offer").length;
+    const flagged = activeJobs.filter((j) => j.is_flagged).length;
+    const unviewed = activeJobs.filter((j) => !j.is_viewed).length;
 
-    const appliedJobsWithSpeed = jobs.filter(
+    const appliedJobsWithSpeed = activeJobs.filter(
       (j) => j.applied_at && j.first_seen_at && j.applied_at >= j.first_seen_at
     );
     const avgMinutes =
@@ -335,12 +356,14 @@ export default function Dashboard() {
           )
         : 4;
 
-    return { total, newDrops, applied, interviewing, offer, avgMinutes };
+    return { total, newDrops, applied, interviewing, offer, flagged, unviewed, avgMinutes };
   }, [jobs]);
 
   // Filtered Job List
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
+      if (job.status === "Deleted") return false;
+
       const matchesSearch =
         searchQuery === "" ||
         job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -367,16 +390,44 @@ export default function Dashboard() {
         companyFilter === "All" ||
         job.company.toLowerCase() === companyFilter.toLowerCase();
 
-      return matchesSearch && matchesStatus && matchesRole && matchesCompany;
+      const matchesViewed =
+        viewedFilter === "All" ||
+        (viewedFilter === "Unviewed" && !job.is_viewed) ||
+        (viewedFilter === "Viewed" && job.is_viewed);
+
+      const matchesFlagged = !flaggedOnlyFilter || job.is_flagged;
+
+      return matchesSearch && matchesStatus && matchesRole && matchesCompany && matchesViewed && matchesFlagged;
     });
-  }, [jobs, searchQuery, statusFilter, roleFilter, companyFilter]);
+  }, [jobs, searchQuery, statusFilter, roleFilter, companyFilter, viewedFilter, flaggedOnlyFilter]);
 
   // Job Action Handlers
   const handleApplyNow = (job) => {
+    let updatedJob = job;
+    if (!job.is_viewed) {
+      updatedJob = { ...job, is_viewed: true };
+      const updated = jobs.map((j) => (j.job_id === job.job_id ? updatedJob : j));
+      saveJobsToStorage(updated, updatedJob);
+    }
+
     if (job.url) {
       window.open(job.url, "_blank", "noopener,noreferrer");
     }
-    setPendingApplyJob(job);
+    setPendingApplyJob(updatedJob);
+  };
+
+  const handleToggleFlag = (job, e) => {
+    if (e) e.stopPropagation();
+    const modifiedTarget = { ...job, is_flagged: !job.is_flagged };
+    const updated = jobs.map((j) => (j.job_id === job.job_id ? modifiedTarget : j));
+    saveJobsToStorage(updated, modifiedTarget);
+  };
+
+  const handleToggleViewed = (job, e) => {
+    if (e) e.stopPropagation();
+    const modifiedTarget = { ...job, is_viewed: !job.is_viewed };
+    const updated = jobs.map((j) => (j.job_id === job.job_id ? modifiedTarget : j));
+    saveJobsToStorage(updated, modifiedTarget);
   };
 
   const handleConfirmApplied = (job) => {
@@ -387,7 +438,8 @@ export default function Dashboard() {
         modifiedTarget = {
           ...j,
           status: "Applied",
-          applied_at: j.applied_at || now
+          applied_at: j.applied_at || now,
+          is_viewed: true
         };
         return modifiedTarget;
       }
@@ -419,12 +471,22 @@ export default function Dashboard() {
   };
 
   const handleOpenDrawer = (job) => {
-    setActiveDrawerJob(job);
+    // Opening drawer also auto-marks job as viewed if not already
+    let currentJob = job;
+    if (!job.is_viewed) {
+      currentJob = { ...job, is_viewed: true };
+      const updated = jobs.map((j) => (j.job_id === job.job_id ? currentJob : j));
+      saveJobsToStorage(updated, currentJob);
+    }
+
+    setActiveDrawerJob(currentJob);
     setDrawerForm({
-      resume_version: job.resume_version || "",
-      referral_note: job.referral_note || "",
-      notes: job.notes || "",
-      status: job.status
+      resume_version: currentJob.resume_version || "",
+      referral_note: currentJob.referral_note || "",
+      notes: currentJob.notes || "",
+      status: currentJob.status,
+      is_viewed: currentJob.is_viewed,
+      is_flagged: currentJob.is_flagged
     });
   };
 
@@ -441,6 +503,8 @@ export default function Dashboard() {
           referral_note: drawerForm.referral_note,
           notes: drawerForm.notes,
           status: drawerForm.status,
+          is_viewed: drawerForm.is_viewed,
+          is_flagged: drawerForm.is_flagged,
           applied_at:
             drawerForm.status === "Applied" && !j.applied_at
               ? Date.now()
@@ -473,7 +537,9 @@ export default function Dashboard() {
       role_level: "New Grad",
       resume_version: "",
       referral_note: "",
-      notes: ""
+      notes: "",
+      is_viewed: false,
+      is_flagged: newJobForm.is_flagged
     };
 
     saveJobsToStorage([createdJob, ...jobs], createdJob);
@@ -483,7 +549,8 @@ export default function Dashboard() {
       title: "",
       location: "Seattle, WA",
       url: "",
-      role_category: "Software Engineer"
+      role_category: "Software Engineer",
+      is_flagged: false
     });
   };
 
@@ -616,13 +683,53 @@ export default function Dashboard() {
       {/* Main Content Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-6 lg:px-10 py-8 space-y-7">
         
-        {/* Soft Pastel Analytics Cards */}
-        <section className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
+        {/* Analytics Cards Grid (Including Flagged & Unviewed) */}
+        <section className="grid grid-cols-2 md:grid-cols-6 gap-3.5">
           <div className="bg-[#fef9c3] border-2 border-[#1e293b] p-4 rounded-md shadow-[2.5px_2.5px_0px_0px_#1e293b] flex flex-col justify-between">
             <span className="font-display font-bold text-xs uppercase tracking-wider text-[#1e293b]">New Drops</span>
             <div className="mt-2 flex items-baseline justify-between">
               <span className="mono-font text-3xl font-bold text-[#1e293b]">{metrics.newDrops}</span>
               <span className="font-mono text-[11px] font-bold bg-white text-[#1e293b] border-2 border-[#1e293b] px-1.5 py-0.5 rounded">Actionable</span>
+            </div>
+          </div>
+
+          {/* Special Flagged (Apply Soon) Metric Card */}
+          <div
+            onClick={() => setFlaggedOnlyFilter((prev) => !prev)}
+            className={`border-2 border-[#1e293b] p-4 rounded-md shadow-[2.5px_2.5px_0px_0px_#1e293b] flex flex-col justify-between cursor-pointer transition ${
+              flaggedOnlyFilter ? "bg-[#fef3c7] ring-2 ring-[#f59e0b]" : "bg-[#fffbe6] hover:bg-[#fef3c7]"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-display font-bold text-xs uppercase tracking-wider text-[#92400e] flex items-center gap-1">
+                <Flag className="w-3.5 h-3.5 fill-[#f59e0b] text-[#d97706]" />
+                <span>Apply Soon</span>
+              </span>
+            </div>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="mono-font text-3xl font-bold text-[#78350f]">{metrics.flagged}</span>
+              <span className="font-mono text-[10px] font-bold bg-[#fef3c7] text-[#92400e] border border-[#f59e0b] px-1.5 py-0.5 rounded">
+                {flaggedOnlyFilter ? "Active Filter" : "Flagged"}
+              </span>
+            </div>
+          </div>
+
+          {/* Unviewed Metric Card */}
+          <div
+            onClick={() => setViewedFilter((prev) => (prev === "Unviewed" ? "All" : "Unviewed"))}
+            className={`border-2 border-[#1e293b] p-4 rounded-md shadow-[2.5px_2.5px_0px_0px_#1e293b] flex flex-col justify-between cursor-pointer transition ${
+              viewedFilter === "Unviewed" ? "bg-[#e0f2fe] ring-2 ring-[#0284c7]" : "bg-[#f0f9ff] hover:bg-[#e0f2fe]"
+            }`}
+          >
+            <span className="font-display font-bold text-xs uppercase tracking-wider text-[#0369a1] flex items-center gap-1">
+              <EyeOff className="w-3.5 h-3.5 text-[#0284c7]" />
+              <span>Unviewed</span>
+            </span>
+            <div className="mt-2 flex items-baseline justify-between">
+              <span className="mono-font text-3xl font-bold text-[#0c4a6e]">{metrics.unviewed}</span>
+              <span className="font-mono text-[10px] font-bold bg-[#e0f2fe] text-[#0369a1] border border-[#0284c7] px-1.5 py-0.5 rounded">
+                {viewedFilter === "Unviewed" ? "Filter Active" : "Unread"}
+              </span>
             </div>
           </div>
 
@@ -642,17 +749,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-[#faf8f5] border-2 border-[#1e293b] p-4 rounded-md shadow-[2.5px_2.5px_0px_0px_#1e293b] flex flex-col justify-between">
-            <span className="font-display font-bold text-xs uppercase tracking-wider text-[#1e293b]">Speed-to-Apply</span>
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="mono-font text-3xl font-bold text-[#1e293b]">
-                {metrics.avgMinutes} <span className="text-sm font-bold">min</span>
-              </span>
-              <span className="font-mono text-[11px] font-bold bg-[#dcfce7] text-[#1e293b] border border-[#1e293b] px-1.5 py-0.5 rounded">&lt; 5m goal</span>
-            </div>
-          </div>
-
-          <div className="bg-white border-2 border-[#1e293b] p-4 rounded-md shadow-[2.5px_2.5px_0px_0px_#1e293b] col-span-2 md:col-span-1 flex flex-col justify-between">
+          <div className="bg-white border-2 border-[#1e293b] p-4 rounded-md shadow-[2.5px_2.5px_0px_0px_#1e293b] flex flex-col justify-between">
             <span className="font-display font-bold text-xs uppercase tracking-wider text-[#1e293b]">Tracked Roles</span>
             <div className="mt-2 flex items-baseline justify-between">
               <span className="mono-font text-3xl font-bold text-[#1e293b]">{metrics.total}</span>
@@ -684,8 +781,37 @@ export default function Dashboard() {
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5 text-xs font-mono font-bold">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-mono font-bold">
               
+              {/* Flagged Only Quick Filter Button */}
+              <button
+                onClick={() => setFlaggedOnlyFilter((prev) => !prev)}
+                className={`soft-brutal-btn flex items-center gap-1.5 px-3 py-1.5 rounded-md border-2 border-[#1e293b] shadow-[1.5px_1.5px_0px_0px_#1e293b] font-bold ${
+                  flaggedOnlyFilter
+                    ? "bg-[#f59e0b] text-white"
+                    : "bg-[#fffbe6] text-[#78350f] hover:bg-[#fef3c7]"
+                }`}
+                title="Filter jobs flagged to apply for soon"
+              >
+                <Flag className={`w-3.5 h-3.5 ${flaggedOnlyFilter ? "fill-white text-white" : "fill-[#f59e0b] text-[#d97706]"}`} />
+                <span>🚩 Apply Soon ({metrics.flagged})</span>
+              </button>
+
+              {/* Viewed Status Filter */}
+              <div className="flex items-center gap-1.5 bg-[#e0f2fe] border-2 border-[#1e293b] px-2.5 py-1.5 rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]">
+                <Eye className="w-3.5 h-3.5 text-[#0284c7]" />
+                <select
+                  value={viewedFilter}
+                  onChange={(e) => setViewedFilter(e.target.value)}
+                  className="bg-transparent text-[#1e293b] focus:outline-none font-bold cursor-pointer"
+                >
+                  <option value="All">All View States</option>
+                  <option value="Unviewed">Unviewed Only ({metrics.unviewed})</option>
+                  <option value="Viewed">Viewed Only</option>
+                </select>
+              </div>
+
+              {/* Status Filter */}
               <div className="flex items-center gap-1.5 bg-[#fef9c3] border-2 border-[#1e293b] px-2.5 py-1.5 rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]">
                 <span className="text-[#1e293b]">Status:</span>
                 <select
@@ -702,6 +828,7 @@ export default function Dashboard() {
                 </select>
               </div>
 
+              {/* Role Filter */}
               <div className="flex items-center gap-1.5 bg-[#dcfce7] border-2 border-[#1e293b] px-2.5 py-1.5 rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]">
                 <span className="text-[#1e293b]">Role:</span>
                 <select
@@ -715,14 +842,15 @@ export default function Dashboard() {
                 </select>
               </div>
 
+              {/* Company Filter */}
               <div className="flex items-center gap-1.5 bg-[#e2e8f0] border-2 border-[#1e293b] px-2.5 py-1.5 rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]">
                 <span className="text-[#1e293b]">Company:</span>
                 <select
                   value={companyFilter}
                   onChange={(e) => setCompanyFilter(e.target.value)}
-                  className="bg-transparent text-[#1e293b] focus:outline-none font-bold cursor-pointer max-w-[130px] truncate"
+                  className="bg-transparent text-[#1e293b] focus:outline-none font-bold cursor-pointer max-w-[120px] truncate"
                 >
-                  <option value="All">All 15 Hubs</option>
+                  <option value="All">All Hubs</option>
                   {TARGET_COMPANIES.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -731,6 +859,7 @@ export default function Dashboard() {
                 </select>
               </div>
 
+              {/* View Switcher */}
               <div className="flex items-center bg-white border-2 border-[#1e293b] p-0.5 rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]">
                 <button
                   onClick={() => setViewMode("cards")}
@@ -766,7 +895,7 @@ export default function Dashboard() {
             <Briefcase className="w-8 h-8 mx-auto text-[#1e293b]" />
             <h3 className="font-display font-bold text-base text-[#1e293b]">No matching position records found</h3>
             <p className="font-sans text-xs text-[#64748b] max-w-sm mx-auto">
-              Adjust your search keywords or dropdown filters.
+              Adjust your search keywords, flag filter, or view state options.
             </p>
             <button
               onClick={() => {
@@ -774,6 +903,8 @@ export default function Dashboard() {
                 setStatusFilter("All");
                 setRoleFilter("All");
                 setCompanyFilter("All");
+                setViewedFilter("All");
+                setFlaggedOnlyFilter(false);
               }}
               className="soft-brutal-btn bg-[#dcfce7] text-[#1e293b] px-3.5 py-1.5 text-xs rounded-md inline-block font-bold"
             >
@@ -782,118 +913,182 @@ export default function Dashboard() {
           </div>
         ) : viewMode === "cards" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5">
-            {filteredJobs.map((job) => (
-              <div
-                key={job.job_id}
-                className="soft-brutal-card p-4.5 rounded-md flex flex-col justify-between relative group"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-xs text-white bg-[#1e293b] px-2.5 py-0.5 rounded-sm shadow-[1.5px_1.5px_0px_0px_#1e293b]">
-                        {job.company}
-                      </span>
-                      <span className="font-mono text-[11px] font-bold text-[#1e293b] bg-[#dcfce7] border border-[#1e293b] px-2 py-0.5 rounded-sm">
-                        New Grad
-                      </span>
+            {filteredJobs.map((job) => {
+              const isUnviewed = !job.is_viewed;
+              const isFlagged = job.is_flagged;
+
+              return (
+                <div
+                  key={job.job_id}
+                  className={`soft-brutal-card p-4.5 rounded-md flex flex-col justify-between relative group transition-all duration-150 ${
+                    isFlagged
+                      ? "bg-[#fffdf5] border-2 border-[#f59e0b] shadow-[3.5px_3.5px_0px_0px_#f59e0b]"
+                      : isUnviewed
+                      ? "bg-white border-2 border-[#1e293b] shadow-[3.5px_3.5px_0px_0px_#1e293b]"
+                      : "bg-[#faf8f5]/90 border-2 border-[#64748b]/60 shadow-[2px_2px_0px_0px_#64748b]"
+                  }`}
+                >
+                  <div>
+                    {/* Special Flag Ribbon Banner if flagged */}
+                    {isFlagged && (
+                      <div className="mb-2.5 -mx-4.5 -mt-4.5 bg-[#fef3c7] border-b-2 border-[#f59e0b] px-4.5 py-1 flex items-center justify-between font-mono text-[10px] font-bold text-[#92400e] rounded-t-sm">
+                        <span className="flex items-center gap-1.5">
+                          <Flag className="w-3 h-3 fill-[#f59e0b] text-[#d97706]" />
+                          <span>FLAGGED TO APPLY SOON</span>
+                        </span>
+                        <button
+                          onClick={(e) => handleToggleFlag(job, e)}
+                          className="hover:underline text-[#b45309]"
+                          title="Remove Flag"
+                        >
+                          Unflag
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono font-bold text-xs text-white bg-[#1e293b] px-2.5 py-0.5 rounded-sm shadow-[1.5px_1.5px_0px_0px_#1e293b]">
+                          {job.company}
+                        </span>
+
+                        {/* Viewed / Unviewed Interactive Badge */}
+                        <button
+                          onClick={(e) => handleToggleViewed(job, e)}
+                          title={isUnviewed ? "Mark as Viewed" : "Mark as Unviewed"}
+                          className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-sm border flex items-center gap-1 transition cursor-pointer ${
+                            isUnviewed
+                              ? "bg-[#e0f2fe] text-[#0369a1] border-[#0284c7] hover:bg-[#bae6fd]"
+                              : "bg-[#f1f5f9] text-[#64748b] border-[#cbd5e1] hover:bg-[#e2e8f0]"
+                          }`}
+                        >
+                          {isUnviewed ? (
+                            <>
+                              <span className="w-2 h-2 rounded-full bg-[#0284c7] animate-pulse"></span>
+                              <span>Unviewed</span>
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-3 h-3 text-[#64748b]" />
+                              <span>Viewed</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {/* Flag Toggle Button */}
+                        <button
+                          onClick={(e) => handleToggleFlag(job, e)}
+                          title={isFlagged ? "Unflag Job" : "Flag to Apply Soon"}
+                          className={`p-1 rounded-sm border transition ${
+                            isFlagged
+                              ? "bg-[#fef3c7] border-[#f59e0b] text-[#d97706] shadow-[1px_1px_0px_0px_#f59e0b]"
+                              : "bg-white border-[#cbd5e1] text-[#94a3b8] hover:text-[#f59e0b] hover:border-[#f59e0b]"
+                          }`}
+                        >
+                          <Flag className={`w-3.5 h-3.5 ${isFlagged ? "fill-[#f59e0b]" : ""}`} />
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteJob(job)}
+                          title="Delete position"
+                          className="text-[#64748b] hover:text-[#ef4444] hover:bg-[#fee2e2] p-1 rounded-sm transition border border-transparent hover:border-[#1e293b]"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Status Select Pill */}
+                        <select
+                          value={job.status}
+                          onChange={(e) => handleUpdateStatus(job.job_id, e.target.value)}
+                          className={`font-mono text-[11px] font-bold px-2 py-0.5 rounded-sm border-2 border-[#1e293b] cursor-pointer focus:outline-none shadow-[1.5px_1.5px_0px_0px_#1e293b] ${
+                            job.status === "New Drop"
+                              ? "bg-[#fef9c3] text-[#1e293b]"
+                              : job.status === "Applied"
+                              ? "bg-[#dcfce7] text-[#1e293b]"
+                              : job.status === "Interviewing"
+                              ? "bg-[#e2e8f0] text-[#1e293b]"
+                              : job.status === "Offer"
+                              ? "bg-[#bbf7d0] text-[#1e293b]"
+                              : "bg-[#f1f5f9] text-[#64748b]"
+                          }`}
+                        >
+                          <option value="New Drop">New Drop</option>
+                          <option value="Applied">Applied</option>
+                          <option value="Interviewing">Interviewing</option>
+                          <option value="Offer">Offer</option>
+                          <option value="Rejected">Rejected</option>
+                        </select>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => handleDeleteJob(job)}
-                        title="Delete position"
-                        className="text-[#64748b] hover:text-[#ef4444] hover:bg-[#fee2e2] p-1 rounded-sm transition border border-transparent hover:border-[#1e293b]"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                      {/* Status Select Pill */}
-                      <select
-                        value={job.status}
-                        onChange={(e) => handleUpdateStatus(job.job_id, e.target.value)}
-                        className={`font-mono text-[11px] font-bold px-2.5 py-0.5 rounded-sm border-2 border-[#1e293b] cursor-pointer focus:outline-none shadow-[1.5px_1.5px_0px_0px_#1e293b] ${
-                          job.status === "New Drop"
-                            ? "bg-[#fef9c3] text-[#1e293b]"
-                            : job.status === "Applied"
-                            ? "bg-[#dcfce7] text-[#1e293b]"
-                            : job.status === "Interviewing"
-                            ? "bg-[#e2e8f0] text-[#1e293b]"
-                            : job.status === "Offer"
-                            ? "bg-[#bbf7d0] text-[#1e293b]"
-                            : "bg-[#f1f5f9] text-[#64748b]"
-                        }`}
-                      >
-                        <option value="New Drop">New Drop</option>
-                        <option value="Applied">Applied</option>
-                        <option value="Interviewing">Interviewing</option>
-                        <option value="Offer">Offer</option>
-                        <option value="Rejected">Rejected</option>
-                      </select>
+                    {/* Position Title */}
+                    <h3 className={`font-display font-bold text-base leading-snug tracking-tight ${
+                      isUnviewed ? "text-[#1e293b]" : "text-[#475569]"
+                    }`}>
+                      {job.title}
+                    </h3>
+
+                    {/* Metadata */}
+                    <div className="mt-3.5 flex items-center justify-between text-xs font-mono font-bold text-[#475569]">
+                      <div className="flex items-center gap-1.5 bg-[#faf8f5] border border-[#1e293b] px-2 py-0.5 rounded-sm">
+                        <MapPin className="w-3.5 h-3.5 text-[#1e293b]" />
+                        <span>{job.location}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-white border border-[#1e293b] px-2 py-0.5 rounded-sm">
+                        <Clock className="w-3.5 h-3.5 text-[#1e293b]" />
+                        <span>{formatTimeAgo(job.first_seen_at)}</span>
+                      </div>
                     </div>
+
+                    {/* Logged Notes */}
+                    {(job.resume_version || job.notes || job.referral_note) && (
+                      <div className="mt-3.5 pt-3 border-t-2 border-[#1e293b] space-y-1 text-xs font-mono bg-[#faf8f5] p-2.5 border border-[#1e293b] rounded-sm">
+                        {job.resume_version && (
+                          <div className="flex items-center gap-1.5 truncate font-bold text-[#1e293b]">
+                            <FileText className="w-3.5 h-3.5 text-[#1e293b] flex-shrink-0" />
+                            <span className="truncate">
+                              {job.resume_version}
+                            </span>
+                          </div>
+                        )}
+                        {job.referral_note && (
+                          <p className="text-[11px] text-[#475569] truncate italic font-medium">
+                            Ref: {job.referral_note}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Position Title */}
-                  <h3 className="font-display font-bold text-base text-[#1e293b] leading-snug tracking-tight">
-                    {job.title}
-                  </h3>
-
-                  {/* Metadata */}
-                  <div className="mt-3.5 flex items-center justify-between text-xs font-mono font-bold text-[#475569]">
-                    <div className="flex items-center gap-1.5 bg-[#faf8f5] border border-[#1e293b] px-2 py-0.5 rounded-sm">
-                      <MapPin className="w-3.5 h-3.5 text-[#1e293b]" />
-                      <span>{job.location}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 bg-white border border-[#1e293b] px-2 py-0.5 rounded-sm">
-                      <Clock className="w-3.5 h-3.5 text-[#1e293b]" />
-                      <span>{formatTimeAgo(job.first_seen_at)}</span>
-                    </div>
-                  </div>
-
-                  {/* Logged Notes */}
-                  {(job.resume_version || job.notes || job.referral_note) && (
-                    <div className="mt-3.5 pt-3 border-t-2 border-[#1e293b] space-y-1 text-xs font-mono bg-[#faf8f5] p-2.5 border border-[#1e293b] rounded-sm">
-                      {job.resume_version && (
-                        <div className="flex items-center gap-1.5 truncate font-bold text-[#1e293b]">
-                          <FileText className="w-3.5 h-3.5 text-[#1e293b] flex-shrink-0" />
-                          <span className="truncate">
-                            {job.resume_version}
-                          </span>
-                        </div>
-                      )}
-                      {job.referral_note && (
-                        <p className="text-[11px] text-[#475569] truncate italic font-medium">
-                          Ref: {job.referral_note}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer Actions */}
-                <div className="mt-4.5 pt-3 border-t-2 border-[#1e293b] flex items-center justify-between gap-2">
-                  <button
-                    onClick={() => handleOpenDrawer(job)}
-                    className="font-mono text-xs font-bold text-[#1e293b] hover:bg-[#e2e8f0] flex items-center gap-1 py-1 px-2.5 border border-[#1e293b] rounded-sm transition"
-                  >
-                    <FileText className="w-3.5 h-3.5 text-[#1e293b]" />
-                    <span>Notes</span>
-                  </button>
-
-                  {job.status !== "Applied" ? (
+                  {/* Footer Actions */}
+                  <div className="mt-4.5 pt-3 border-t-2 border-[#1e293b] flex items-center justify-between gap-2">
                     <button
-                      onClick={() => handleApplyNow(job)}
-                      className="soft-brutal-btn flex items-center gap-1.5 text-xs px-3.5 py-1.5 font-bold rounded-md bg-[#dcfce7] text-[#1e293b]"
+                      onClick={() => handleOpenDrawer(job)}
+                      className="font-mono text-xs font-bold text-[#1e293b] hover:bg-[#e2e8f0] flex items-center gap-1 py-1 px-2.5 border border-[#1e293b] rounded-sm transition"
                     >
-                      <span>Apply Now</span>
-                      <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <FileText className="w-3.5 h-3.5 text-[#1e293b]" />
+                      <span>Notes</span>
                     </button>
-                  ) : (
-                    <span className="text-[11px] font-mono font-bold text-[#64748b] bg-[#faf8f5] px-2 py-1 rounded border border-[#e2e8f0]">
-                      Applied ✓
-                    </span>
-                  )}
+
+                    {job.status !== "Applied" ? (
+                      <button
+                        onClick={() => handleApplyNow(job)}
+                        className="soft-brutal-btn flex items-center gap-1.5 text-xs px-3.5 py-1.5 font-bold rounded-md bg-[#dcfce7] text-[#1e293b]"
+                      >
+                        <span>Apply Now</span>
+                        <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                      </button>
+                    ) : (
+                      <span className="text-[11px] font-mono font-bold text-[#64748b] bg-[#faf8f5] px-2 py-1 rounded border border-[#e2e8f0]">
+                        Applied ✓
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           /* Table View */
@@ -901,9 +1096,11 @@ export default function Dashboard() {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b-2 border-[#1e293b] font-display font-bold text-[#1e293b] bg-[#fef9c3]">
+                  <th className="p-3 border-r border-[#1e293b] w-10 text-center">🚩</th>
                   <th className="p-3.5 border-r border-[#1e293b]">Company</th>
                   <th className="p-3.5 border-r border-[#1e293b]">Position Title</th>
                   <th className="p-3.5 border-r border-[#1e293b]">Location</th>
+                  <th className="p-3.5 border-r border-[#1e293b]">Viewed</th>
                   <th className="p-3.5 border-r border-[#1e293b]">Detected</th>
                   <th className="p-3.5 border-r border-[#1e293b]">Status</th>
                   <th className="p-3.5 border-r border-[#1e293b]">Logged Resume</th>
@@ -912,7 +1109,16 @@ export default function Dashboard() {
               </thead>
               <tbody className="divide-y border-[#1e293b] font-mono text-xs">
                 {filteredJobs.map((job) => (
-                  <tr key={job.job_id} className="hover:bg-[#faf8f5] transition">
+                  <tr key={job.job_id} className={`hover:bg-[#faf8f5] transition ${job.is_flagged ? "bg-[#fffdf5]" : ""}`}>
+                    <td className="p-3 text-center border-r border-[#1e293b]">
+                      <button
+                        onClick={(e) => handleToggleFlag(job, e)}
+                        title={job.is_flagged ? "Unflag" : "Flag to Apply Soon"}
+                        className="p-1"
+                      >
+                        <Flag className={`w-3.5 h-3.5 ${job.is_flagged ? "fill-[#f59e0b] text-[#d97706]" : "text-[#94a3b8]"}`} />
+                      </button>
+                    </td>
                     <td className="p-3.5 font-bold text-[#1e293b] whitespace-nowrap border-r border-[#1e293b]">
                       {job.company}
                     </td>
@@ -921,6 +1127,18 @@ export default function Dashboard() {
                     </td>
                     <td className="p-3.5 text-[#475569] whitespace-nowrap border-r border-[#1e293b]">
                       {job.location}
+                    </td>
+                    <td className="p-3.5 whitespace-nowrap border-r border-[#1e293b]">
+                      <button
+                        onClick={(e) => handleToggleViewed(job, e)}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-sm border cursor-pointer ${
+                          !job.is_viewed
+                            ? "bg-[#e0f2fe] text-[#0369a1] border-[#0284c7]"
+                            : "bg-[#f1f5f9] text-[#64748b] border-[#cbd5e1]"
+                        }`}
+                      >
+                        {!job.is_viewed ? "Unviewed" : "Viewed ✓"}
+                      </button>
                     </td>
                     <td className="p-3.5 text-[#475569] whitespace-nowrap border-r border-[#1e293b]">
                       {formatTimeAgo(job.first_seen_at)}
@@ -995,9 +1213,16 @@ export default function Dashboard() {
             <div>
               <div className="flex items-start justify-between gap-4 pb-4 border-b-2 border-[#1e293b]">
                 <div>
-                  <span className="font-mono font-bold text-xs text-white bg-[#1e293b] px-2.5 py-0.5 rounded-sm">
-                    {activeDrawerJob.company}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-xs text-white bg-[#1e293b] px-2.5 py-0.5 rounded-sm">
+                      {activeDrawerJob.company}
+                    </span>
+                    {activeDrawerJob.is_flagged && (
+                      <span className="font-mono text-[10px] font-bold bg-[#fef3c7] text-[#92400e] border border-[#f59e0b] px-2 py-0.5 rounded-sm flex items-center gap-1">
+                        <Flag className="w-3 h-3 fill-[#f59e0b]" /> Apply Soon
+                      </span>
+                    )}
+                  </div>
                   <h2 className="font-display font-bold text-lg text-[#1e293b] mt-2 leading-snug">
                     {activeDrawerJob.title}
                   </h2>
@@ -1025,6 +1250,51 @@ export default function Dashboard() {
               </div>
 
               <form onSubmit={handleSaveDrawerNotes} className="mt-6 space-y-4 font-mono text-xs font-bold">
+                
+                {/* Toggles for Flagged & Viewed */}
+                <div className="grid grid-cols-2 gap-2 bg-[#faf8f5] p-3 border-2 border-[#1e293b] rounded-md shadow-[1.5px_1.5px_0px_0px_#1e293b]">
+                  <div>
+                    <label className="block text-[#1e293b] mb-1">Flagged Status</label>
+                    <button
+                      type="button"
+                      onClick={() => setDrawerForm((prev) => ({ ...prev, is_flagged: !prev.is_flagged }))}
+                      className={`w-full py-1.5 px-2 rounded border text-xs font-bold flex items-center justify-center gap-1.5 transition ${
+                        drawerForm.is_flagged
+                          ? "bg-[#fef3c7] text-[#92400e] border-[#f59e0b]"
+                          : "bg-white text-[#64748b] border-[#cbd5e1]"
+                      }`}
+                    >
+                      <Flag className={`w-3.5 h-3.5 ${drawerForm.is_flagged ? "fill-[#f59e0b] text-[#d97706]" : ""}`} />
+                      <span>{drawerForm.is_flagged ? "Flagged (Soon)" : "Not Flagged"}</span>
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-[#1e293b] mb-1">Viewed State</label>
+                    <button
+                      type="button"
+                      onClick={() => setDrawerForm((prev) => ({ ...prev, is_viewed: !prev.is_viewed }))}
+                      className={`w-full py-1.5 px-2 rounded border text-xs font-bold flex items-center justify-center gap-1.5 transition ${
+                        !drawerForm.is_viewed
+                          ? "bg-[#e0f2fe] text-[#0369a1] border-[#0284c7]"
+                          : "bg-white text-[#64748b] border-[#cbd5e1]"
+                      }`}
+                    >
+                      {!drawerForm.is_viewed ? (
+                        <>
+                          <span className="w-2 h-2 rounded-full bg-[#0284c7]"></span>
+                          <span>Unviewed</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-[#64748b]" />
+                          <span>Viewed</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-[#1e293b] mb-1.5">
                     Pipeline Status
@@ -1103,7 +1373,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => handleApplyNow(activeDrawerJob)}
-                className="soft-brutal-btn w-full flex items-center justify-between bg-white text-[#1e293b] p-2.5 rounded-md"
+                className="soft-brutal-btn w-full flex items-center justify-between bg-[#dcfce7] text-[#1e293b] p-2.5 rounded-md"
               >
                 <span>Direct Application Link</span>
                 <ExternalLink className="w-4 h-4 stroke-[2.5]" />
@@ -1188,6 +1458,19 @@ export default function Dashboard() {
                   onChange={(e) => setNewJobForm({ ...newJobForm, url: e.target.value })}
                   className="w-full bg-[#faf8f5] border-2 border-[#1e293b] text-[#1e293b] p-2 rounded-md focus:outline-none shadow-[1.5px_1.5px_0px_0px_#1e293b]"
                 />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="modal_is_flagged"
+                  checked={newJobForm.is_flagged}
+                  onChange={(e) => setNewJobForm({ ...newJobForm, is_flagged: e.target.checked })}
+                  className="w-4 h-4 rounded border-2 border-[#1e293b]"
+                />
+                <label htmlFor="modal_is_flagged" className="text-xs text-[#1e293b] cursor-pointer">
+                  🚩 Flag to Apply Soon
+                </label>
               </div>
 
               <div className="pt-3 flex items-center justify-end gap-2">

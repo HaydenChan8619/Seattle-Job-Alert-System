@@ -20,7 +20,14 @@ except Exception as e:
     table = None
 
 LOCATION_KEYWORDS = ["seattle", "bellevue", "redmond", "wa", "washington"]
-ROLE_KEYWORDS = ["software", "sde", "swe", "product manager", "product management", "pm", "apm", "developer", "engineer"]
+
+# Target Software & Product Management Roles Only
+ROLE_KEYWORDS = [
+    "software", "sde", "swe", "developer", "product manager", "product management",
+    "pm", "apm", "full stack", "fullstack", "frontend", "front-end", "backend",
+    "back-end", "data engineer", "site reliability", "sre", "devops", "mobile",
+    "ios", "android"
+]
 
 # Target New Grad & Early Career Keywords
 NEW_GRAD_KEYWORDS = [
@@ -29,10 +36,20 @@ NEW_GRAD_KEYWORDS = [
     "campus", "2025", "2026", "sde 1", "sde i", "swe 1", "swe i", "apm"
 ]
 
-# Strict Exclusions for Experienced Roles
+# Strict Exclusions for Experienced & Advanced Degree Roles
 EXCLUDE_KEYWORDS = [
     "senior", "sr", "staff", "principal", "lead", "manager", "director",
-    "vp", "head", "architect", "ii", "iii", "iv", "l5", "l6", "l7", "l8"
+    "vp", "head", "architect", "ii", "iii", "iv", "l4", "l5", "l6", "l7", "l8",
+    "phd", "ph.d", "doctorate", "doctoral", "postdoc", "post-doc", "research scientist",
+    "experienced", "mid-level", "mid level", "expert", "specialist"
+]
+
+# Exclusions for Non-Software / Hardware Roles
+HARDWARE_EXCLUDE_KEYWORDS = [
+    "thermal", "hardware", "mechanical", "electrical", "analog", "asic",
+    "fpga", "rf", "optical", "optics", "packaging", "silicon", "cad", "ecad",
+    "manufacturing", "dvt", "materials", "aerospace", "civil", "structural",
+    "chemical", "lab test", "avionics", "power", "satellite"
 ]
 
 HEADERS = {
@@ -46,27 +63,61 @@ ssl_ctx = ssl.create_default_context()
 ssl_ctx.check_hostname = False
 ssl_ctx.verify_mode = ssl.CERT_NONE
 
-def is_target_role_and_location(title: str, location: str) -> bool:
-    title_lower = title.lower()
-    location_lower = location.lower()
+def contains_keyword(text: str, keywords: list) -> bool:
+    for kw in keywords:
+        pattern = r'\b' + re.escape(kw) + r'\b'
+        if re.search(pattern, text, re.IGNORECASE):
+            return True
+    return False
+
+def requires_excess_experience(text: str, max_years: int = 2) -> bool:
+    if not text:
+        return False
     
+    # 1. Match patterns like "3+ years", "4+ yrs", "3+ year"
+    pattern_plus = r'\b([3-9]|\d{2})\s*\+\s*(?:years|yrs|year|yr)\b'
+    for match in re.findall(pattern_plus, text, re.IGNORECASE):
+        if int(match) > max_years:
+            return True
+            
+    # 2. Match patterns like "at least 3 years", "minimum 4 years", "min 3 years"
+    pattern_at_least = r'(?:at least|minimum|min|with|requires?)\s+([3-9]|\d{2})\s*\+?\s*(?:to\s*\d+\s*)?(?:years|yrs|year|yr)'
+    for match in re.findall(pattern_at_least, text, re.IGNORECASE):
+        if int(match) > max_years:
+            return True
+            
+    # 3. Match ranges like "3-5 years", "4 to 6 years"
+    pattern_range = r'\b([3-9]|\d{2})\s*(?:-|to)\s*\d+\s*(?:years|yrs|year|yr)\b'
+    for match in re.findall(pattern_range, text, re.IGNORECASE):
+        if int(match) > max_years:
+            return True
+
+    return False
+
+def is_target_role_and_location(title: str, location: str, description: str = "") -> bool:
     # 1. Location match check
-    match_location = any(loc in location_lower for loc in LOCATION_KEYWORDS)
-    if not match_location:
+    if not contains_keyword(location, LOCATION_KEYWORDS):
         return False
         
-    # 2. Role match check (SWE or PM)
-    match_role = any(role in title_lower for role in ROLE_KEYWORDS)
-    if not match_role:
-        return False
-        
-    # 3. Explicit Senior / Experienced exclusion check
-    has_exclusion = any(ex in title_lower for ex in EXCLUDE_KEYWORDS)
-    if has_exclusion:
+    # 2. Hardware / Non-Software exclusion check
+    if contains_keyword(title, HARDWARE_EXCLUDE_KEYWORDS):
         return False
 
-    # 4. New Grad / Early Career match check
-    match_new_grad = any(ng in title_lower for ng in NEW_GRAD_KEYWORDS)
+    # 3. Role match check (Software or PM only)
+    if not contains_keyword(title, ROLE_KEYWORDS):
+        return False
+        
+    # 4. Explicit Senior / Experienced / Advanced Degree exclusion check
+    if contains_keyword(title, EXCLUDE_KEYWORDS):
+        return False
+
+    # 5. Experience requirements check (Max 2 years allowed)
+    if requires_excess_experience(title, max_years=2) or requires_excess_experience(description, max_years=2):
+        return False
+
+    # 6. New Grad / Early Career match check
+    match_new_grad = contains_keyword(title, NEW_GRAD_KEYWORDS) or contains_keyword(description, NEW_GRAD_KEYWORDS)
+    has_exclusion = contains_keyword(title, EXCLUDE_KEYWORDS)
     
     return match_new_grad or not has_exclusion
 
@@ -93,6 +144,8 @@ def save_job_state(job_id: str, company: str, title: str, url: str):
                 "url": url,
                 "first_seen_at": int(time.time()),
                 "role_level": "New Grad / Early Career",
+                "is_viewed": False,
+                "is_flagged": False,
                 "ttl": ttl_timestamp
             }
         )
@@ -166,8 +219,9 @@ def check_greenhouse_companies():
             title = job.get("title", "")
             location = job.get("location", {}).get("name", "")
             job_url = job.get("absolute_url", "")
+            content = job.get("content", "")
 
-            if is_target_role_and_location(title, location) and not is_already_notified(job_id):
+            if is_target_role_and_location(title, location, content) and not is_already_notified(job_id):
                 new_jobs.append({"job_id": job_id, "company": b['name'], "title": title, "location": location, "url": job_url})
     return new_jobs
 
@@ -181,8 +235,9 @@ def check_amazon():
             title = job.get("title", "")
             location = job.get("location", "")
             job_url = f"https://www.amazon.jobs{job.get('job_path', '')}"
+            description = job.get("description", "") + " " + job.get("basic_qualifications", "")
 
-            if is_target_role_and_location(title, location) and not is_already_notified(job_id):
+            if is_target_role_and_location(title, location, description) and not is_already_notified(job_id):
                 new_jobs.append({"job_id": job_id, "company": "amazon", "title": title, "location": location, "url": job_url})
     return new_jobs
 
