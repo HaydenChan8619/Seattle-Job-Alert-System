@@ -1,0 +1,50 @@
+# Dependencies
+/node_modules
+/.pnpm
+/.yarn
+
+# Next.js build output & Vercel
+/.next/
+/out/
+/build
+/.vercel
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Environment variables & local secrets
+.env
+.env*.local
+*.env
+
+# Terraform build & state files
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Lambda ZIP packages & Python artifacts
+lambda_function.zip
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# System & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
