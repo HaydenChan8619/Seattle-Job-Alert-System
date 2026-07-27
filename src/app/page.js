@@ -483,7 +483,8 @@ export default function Dashboard() {
           ...j,
           status: "Applied",
           applied_at: j.applied_at || now,
-          is_viewed: true
+          is_viewed: true,
+          is_flagged: false
         };
         return modifiedTarget;
       }
@@ -502,10 +503,13 @@ export default function Dashboard() {
     let modifiedTarget = null;
     const updated = jobs.map((j) => {
       if (j.job_id === jobId) {
+        const isApplied = newStatus === "Applied";
         modifiedTarget = {
           ...j,
           status: newStatus,
-          applied_at: newStatus === "Applied" && !j.applied_at ? now : j.applied_at
+          applied_at: isApplied && !j.applied_at ? now : j.applied_at,
+          is_viewed: isApplied ? true : j.is_viewed,
+          is_flagged: isApplied ? false : j.is_flagged
         };
         return modifiedTarget;
       }
@@ -541,16 +545,17 @@ export default function Dashboard() {
     let modifiedTarget = null;
     const updated = jobs.map((j) => {
       if (j.job_id === activeDrawerJob.job_id) {
+        const isApplied = drawerForm.status === "Applied";
         modifiedTarget = {
           ...j,
           resume_version: drawerForm.resume_version,
           referral_note: drawerForm.referral_note,
           notes: drawerForm.notes,
           status: drawerForm.status,
-          is_viewed: drawerForm.is_viewed,
-          is_flagged: drawerForm.is_flagged,
+          is_viewed: isApplied ? true : drawerForm.is_viewed,
+          is_flagged: isApplied ? false : drawerForm.is_flagged,
           applied_at:
-            drawerForm.status === "Applied" && !j.applied_at
+            isApplied && !j.applied_at
               ? Date.now()
               : j.applied_at
         };
