@@ -361,7 +361,7 @@ export default function Dashboard() {
 
   // Filtered Job List
   const filteredJobs = useMemo(() => {
-    return jobs.filter((job) => {
+    const list = jobs.filter((job) => {
       if (job.status === "Deleted") return false;
 
       const matchesSearch =
@@ -398,6 +398,19 @@ export default function Dashboard() {
       const matchesFlagged = !flaggedOnlyFilter || job.is_flagged;
 
       return matchesSearch && matchesStatus && matchesRole && matchesCompany && matchesViewed && matchesFlagged;
+    });
+
+    return list.sort((a, b) => {
+      // 1. Unviewed jobs (false) come before Viewed jobs (true)
+      if (Boolean(a.is_viewed) !== Boolean(b.is_viewed)) {
+        return a.is_viewed ? 1 : -1;
+      }
+      // 2. Flagged jobs (true) come before unflagged jobs (false)
+      if (Boolean(a.is_flagged) !== Boolean(b.is_flagged)) {
+        return a.is_flagged ? -1 : 1;
+      }
+      // 3. Newest first
+      return (b.first_seen_at || 0) - (a.first_seen_at || 0);
     });
   }, [jobs, searchQuery, statusFilter, roleFilter, companyFilter, viewedFilter, flaggedOnlyFilter]);
 
